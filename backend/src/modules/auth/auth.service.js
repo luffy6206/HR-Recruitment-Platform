@@ -30,7 +30,11 @@ export const loginUser = async ({ email, password }) => {
     throw new AppError("Invalid email or password", 401);
   }
 
-  const accessToken = generateAccessToken(user._id);
+  const accessToken = generateAccessToken({
+    id: user._id,
+    role: user.role,
+  });
+
   const refreshToken = generateRefreshToken(user._id);
 
   user.refreshToken = refreshToken;
@@ -58,14 +62,21 @@ export const refreshAccessToken = async (refreshToken) => {
     throw new AppError("Refresh token required", 401);
   }
 
-  const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+  const decoded = jwt.verify(
+    refreshToken,
+    process.env.JWT_REFRESH_SECRET
+  );
+
   const user = await User.findById(decoded.id);
 
   if (!user || user.refreshToken !== refreshToken) {
     throw new AppError("Invalid refresh token", 401);
   }
 
-  const accessToken = generateAccessToken(user._id);
+  const accessToken = generateAccessToken({
+    id: user._id,
+    role: user.role,
+  });
 
   return { accessToken };
 };
