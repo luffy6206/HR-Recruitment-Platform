@@ -110,9 +110,9 @@ export const assignCandidate =
     }
 
     const oldStatus =
-      candidate.currentStatus;
+      candidate.status;
 
-    candidate.currentStatus =
+    candidate.status =
       CANDIDATE_STATUS.SELECTED;
 
     await candidate.save();
@@ -121,7 +121,7 @@ export const assignCandidate =
       candidateId,
 
       fieldName:
-        "currentStatus",
+        "status",
 
       oldValue:
         oldStatus,
@@ -171,9 +171,9 @@ export const assignCandidate =
     }
 
     const oldStatus =
-      candidate.currentStatus;
+      candidate.status;
 
-    candidate.currentStatus =
+    candidate.status =
       CANDIDATE_STATUS.DROPPED;
 
     await candidate.save();
@@ -182,7 +182,7 @@ export const assignCandidate =
       candidateId,
 
       fieldName:
-        "currentStatus",
+        "status",
 
       oldValue:
         oldStatus,

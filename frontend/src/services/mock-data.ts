@@ -19,8 +19,8 @@ function rand<T>(arr: readonly T[]): T { return arr[Math.floor(Math.random() * a
 function id(n: number) { return Math.random().toString(36).slice(2, 2 + n); }
 
 export const MOCK_USERS: (User & { password: string })[] = [
-  { id: "u1", name: "Aanya Kapoor", email: "admin@hrr.app", password: "admin123", role: "ADMIN" },
-  { id: "u2", name: "Rohan Mehta", email: "hr@hrr.app", password: "hr123", role: "HR" },
+  { id: "u1", name: "Aanya Kapoor", email: "admin@company.com", password: "Admin@123", role: "ADMIN" },
+  { id: "u2", name: "Rohan Mehta", email: "hr@company.com", password: "Hr@123", role: "HR" },
 ];
 
 export const MOCK_CANDIDATES: Candidate[] = Array.from({ length: 48 }).map((_, i) => {

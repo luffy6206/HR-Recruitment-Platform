@@ -17,7 +17,7 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   });
   const unread = notifications.filter((n) => !n.read).length;
 
-  const initials = user?.name?.split(" ").map((p) => p[0]).slice(0, 2).join("") ?? "U";
+  const initials = user?.name ? user.name.split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("") || "U" : "U";
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-md lg:px-6">

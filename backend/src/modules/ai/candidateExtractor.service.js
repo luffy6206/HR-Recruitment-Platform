@@ -1,7 +1,7 @@
 export const extractCandidateData =
   async (resumeText) => {
     return {
-      fullName: "",
+      name: "",
 
       email: "",
 

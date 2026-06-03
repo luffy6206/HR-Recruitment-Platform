@@ -209,15 +209,15 @@ function DashboardPage() {
               className="flex items-center gap-3 p-4 transition hover:bg-muted/40"
             >
               <div className="grid size-10 place-items-center rounded-full gradient-primary text-sm font-semibold text-primary-foreground">
-                {c.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+                {(c.name ?? "Unknown Candidate").split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("") || "UC"}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">{c.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{c.code} • {c.category}</p>
+                <p className="truncate text-sm font-medium text-foreground">{c.name ?? "Unknown Candidate"}</p>
+                <p className="truncate text-xs text-muted-foreground">{c.code ?? "N/A"} • {c.category ?? "General"}</p>
               </div>
               <StatusBadge status={c.status} />
               <span className="hidden text-xs text-muted-foreground sm:inline">
-                {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
+                {c.createdAt ? formatDistanceToNow(new Date(c.createdAt), { addSuffix: true }) : "—"}
               </span>
             </Link>
           ))}

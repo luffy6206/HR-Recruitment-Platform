@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Download, Filter, Plus, Search, Trash2, UserCog } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileUp, Filter, Plus, Search, Trash2, UserCog } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/layouts/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -11,8 +12,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
 import { format } from "date-fns";
+import { useResumeUpload } from "@/hooks/useResumeUpload";
+import { ResumeUploadDialog } from "@/components/candidates/ResumeUploadDialog";
+
+
+
+
+
+
 
 export const Route = createFileRoute("/candidates")({
   head: () => ({ meta: [{ title: "Candidates — Talentflow" }] }),
@@ -36,15 +44,36 @@ function CandidatesPage() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | CandidateStatus>("ALL");
   const [page, setPage] = useState(1);
+  const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const pageSize = 10;
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Resume upload mutation
+  const resumeUploadMut = useResumeUpload({
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["candidates"] });
+      toast.success(`${data.imported} candidates imported successfully`);
+      setResumeDialogOpen(false);
+      setUploadProgress(0);
+    },
+    onError: (error) => {
+      toast.error(error?.message ?? "Failed to upload resumes");
+      setUploadProgress(0);
+    },
+    onProgress: (progress) => {
+      setUploadProgress(progress);
+    },
+  });
 
   const filtered = useMemo(() => {
     return candidates.filter((c) => {
       if (statusFilter !== "ALL" && c.status !== statusFilter) return false;
-      if (!q.trim()) return true;
+      if (!q || !q.trim()) return true;
       const s = q.toLowerCase();
-      return c.name.toLowerCase().includes(s) || c.email.toLowerCase().includes(s) || c.code.toLowerCase().includes(s);
+      return (c.name ?? "").toLowerCase().includes(s) || 
+             (c.email ?? "").toLowerCase().includes(s) || 
+             (c.code ?? "").toLowerCase().includes(s);
     });
   }, [candidates, q, statusFilter]);
 
@@ -93,6 +122,9 @@ function CandidatesPage() {
         description="Search, filter and manage your full talent pipeline."
         actions={
           <>
+            <button onClick={() => setResumeDialogOpen(true)} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted">
+              <FileUp className="size-4" /> Upload Resumes
+            </button>
             <button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted">
               <Download className="size-4" /> Export
             </button>
@@ -204,6 +236,14 @@ function CandidatesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Resume upload dialog */}
+      <ResumeUploadDialog
+        open={resumeDialogOpen}
+        onOpenChange={setResumeDialogOpen}
+        onFilesSelected={(files) => resumeUploadMut.mutateAsync(files)}
+        isLoading={resumeUploadMut.isPending}
+      />
     </>
   );
 }
@@ -211,22 +251,22 @@ function CandidatesPage() {
 function CandidateRow({ c, onDelete }: { c: Candidate; onDelete: () => void }) {
   return (
     <tr className="border-b border-border last:border-0 transition hover:bg-muted/30">
-      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.code}</td>
+      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.code ?? "N/A"}</td>
       <td className="px-4 py-3">
         <Link to={"/candidates/$id" as any} params={{ id: c.id } as any} className="flex items-center gap-2.5">
           <span className="grid size-8 place-items-center rounded-full gradient-primary text-xs font-semibold text-primary-foreground">
-            {c.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+            {(c.name ?? "Unknown Candidate").split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("") || "UC"}
           </span>
-          <span className="font-medium text-foreground hover:text-primary">{c.name}</span>
+          <span className="font-medium text-foreground hover:text-primary">{c.name ?? "Unknown Candidate"}</span>
         </Link>
       </td>
-      <td className="px-4 py-3 text-muted-foreground">{c.email}</td>
-      <td className="px-4 py-3 text-muted-foreground">{c.phone}</td>
+      <td className="px-4 py-3 text-muted-foreground">{c.email ?? "—"}</td>
+      <td className="px-4 py-3 text-muted-foreground">{c.phone ?? "—"}</td>
       <td className="px-4 py-3">
-        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{c.category}</span>
+        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{c.category ?? "General"}</span>
       </td>
       <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">{format(new Date(c.createdAt), "MMM d, yyyy")}</td>
+      <td className="px-4 py-3 text-xs text-muted-foreground">{c.createdAt ? format(new Date(c.createdAt), "MMM d, yyyy") : "—"}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
           <Link

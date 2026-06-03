@@ -17,17 +17,24 @@ export const createCandidate = async (
   payload,
   userId
 ) => {
+  // Candidate Validation & Sanitization Layer
+  const name = payload.name ?? payload.fullName ?? "Unknown Candidate";
+  const email = payload.email ? String(payload.email).toLowerCase().trim() : "";
+  const phone = payload.phone ? String(payload.phone).trim() : "";
+  const category = payload.category ?? "General";
+  const status = payload.status ?? payload.currentStatus ?? "NEW";
+
   const duplicateConditions = [];
 
-  if (payload.email) {
+  if (email) {
     duplicateConditions.push({
-      email: payload.email.toLowerCase(),
+      email: email,
     });
   }
 
-  if (payload.phone) {
+  if (phone) {
     duplicateConditions.push({
-      phone: payload.phone,
+      phone: phone,
     });
   }
 
@@ -52,13 +59,12 @@ export const createCandidate = async (
   const candidate =
     await Candidate.create({
       ...payload,
-
-      email: payload.email
-        ? payload.email.toLowerCase()
-        : undefined,
-
-      candidateCode,
-
+      name,
+      email: email || undefined,
+      phone: phone || undefined,
+      category,
+      status,
+      code: candidateCode,
       uploadInfo: {
         uploadedBy: userId,
         uploadedAt: new Date(),
@@ -107,7 +113,7 @@ export const getCandidates = async (
   if (search) {
     filter.$or = [
       {
-        fullName: {
+        name: {
           $regex: search,
           $options: "i",
         },
@@ -128,7 +134,7 @@ export const getCandidates = async (
   }
 
   if (status) {
-    filter.currentStatus = status;
+    filter.status = status;
   }
 
   if (assignedHR) {
@@ -228,25 +234,33 @@ export const updateCandidate = async (
   }
 
   const allowedFields = [
-    "fullName",
+    "name",
     "email",
     "phone",
     "category",
     "assignedHR",
-    "currentStatus",
+    "status",
   ];
 
   const updates = {};
 
   for (const field of allowedFields) {
+    let payloadField = field;
+    if (field === "name" && !Object.prototype.hasOwnProperty.call(payload, "name") && Object.prototype.hasOwnProperty.call(payload, "fullName")) {
+      payloadField = "fullName";
+    }
+    if (field === "status" && !Object.prototype.hasOwnProperty.call(payload, "status") && Object.prototype.hasOwnProperty.call(payload, "currentStatus")) {
+      payloadField = "currentStatus";
+    }
+
     if (
       Object.prototype.hasOwnProperty.call(
         payload,
-        field
+        payloadField
       )
     ) {
       updates[field] =
-        payload[field];
+        payload[payloadField];
     }
   }
 
@@ -254,7 +268,7 @@ export const updateCandidate = async (
     updates.email
   ) {
     updates.email =
-      updates.email.toLowerCase();
+      updates.email.toLowerCase().trim();
   }
 
   for (const key of Object.keys(

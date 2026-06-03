@@ -11,7 +11,7 @@ export const getStatusDistribution =
 
       {
         $group: {
-          _id: "$currentStatus",
+          _id: "$status",
 
           count: {
             $sum: 1,
@@ -36,12 +36,12 @@ export const getCandidateSummary =
 
     const selectedCandidates =
       await Candidate.countDocuments({
-        currentStatus: "SELECTED",
+        status: "SELECTED",
       });
 
     const droppedCandidates =
       await Candidate.countDocuments({
-        currentStatus: "DROPPED",
+        status: "DROPPED",
       });
 
     return {
