@@ -29,17 +29,27 @@ import {
 const delay = (ms = 350) => new Promise((r) => setTimeout(r, ms));
 
 // ---- Auth ----
+import { http } from "./http";
+
 export const authService = {
   async login(email: string, password: string) {
-    await delay();
-    const found = MOCK_USERS.find((u) => u.email === email && u.password === password);
-    if (!found) throw new Error("Invalid email or password");
-    const { password: _p, ...user } = found;
+    const response = await http.post("/auth/login", { email, password });
+    const payload = response.data;
+    const user = payload.user;
     return {
-      accessToken: "mock-access-" + Math.random().toString(36).slice(2),
-      refreshToken: "mock-refresh-" + Math.random().toString(36).slice(2),
-      user: user as User,
+      accessToken: payload.accessToken,
+      refreshToken: payload.refreshToken,
+      user: {
+        id: user._id ?? user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     };
+  },
+
+  async logout() {
+    await http.post("/auth/logout");
   },
 };
 
@@ -49,40 +59,34 @@ export const dashboardService = {
 };
 
 // ---- Candidates ----
-let _candidates = [...MOCK_CANDIDATES];
 export const candidateService = {
-  async list(): Promise<Candidate[]> { await delay(); return [..._candidates]; },
+  async list(): Promise<Candidate[]> {
+    const response = await http.get("/candidates");
+    return response.data.candidates ?? [];
+  },
+
   async get(id: string): Promise<{
     candidate: Candidate;
-    profile: CandidateProfile;
+    profile: CandidateProfile | null;
     timeline: TimelineEvent[];
     audits: AuditEntry[];
   }> {
-    await delay();
-    const candidate = _candidates.find((c) => c.id === id);
-    if (!candidate) throw new Error("Candidate not found");
-    return { candidate, profile: mockProfile(id), timeline: mockTimeline(id), audits: mockAudits(id) };
+    const response = await http.get(`/candidates/${id}`);
+    return response.data;
   },
+
   async create(data: Omit<Candidate, "id" | "code" | "status" | "createdAt">): Promise<Candidate> {
-    await delay();
-    const c: Candidate = {
-      ...data,
-      id: `c${Date.now()}`,
-      code: `CAN-${1000 + _candidates.length + 1}`,
-      status: "NEW",
-      createdAt: new Date().toISOString(),
-    };
-    _candidates = [c, ..._candidates];
-    return c;
+    const response = await http.post("/candidates", data);
+    return response.data;
   },
+
   async update(id: string, patch: Partial<Candidate>): Promise<Candidate> {
-    await delay();
-    _candidates = _candidates.map((c) => (c.id === id ? { ...c, ...patch } : c));
-    return _candidates.find((c) => c.id === id)!;
+    const response = await http.patch(`/candidates/${id}`, patch);
+    return response.data;
   },
+
   async remove(id: string): Promise<void> {
-    await delay();
-    _candidates = _candidates.filter((c) => c.id !== id);
+    await http.delete(`/candidates/${id}`);
   },
 };
 

@@ -7,6 +7,10 @@ import protect from "../../middleware/auth.middleware.js";
 import authorize from "../../middleware/role.middleware.js";
 
 import { ROLES } from "../../constants/roles.js";
+import resumeUploadRoutes from "./resumeUpload.routes.js";
+
+
+
 
 router.get(
     "/",
@@ -47,5 +51,7 @@ router.delete(
     ),
     controller.deleteCandidate
 );
+
+router.use("/", resumeUploadRoutes);
 
 export default router;

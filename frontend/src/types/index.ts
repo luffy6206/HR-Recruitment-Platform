@@ -94,3 +94,23 @@ export interface DashboardStats {
   droppedCandidates: number;
   followUpsToday: number;
 }
+// Add to existing types file:
+
+export interface ResumeAnalysisResult {
+  name: string;
+  email: string;
+  phone: string;
+  skills: string[];
+  experienceYears: number;
+  education: string;
+  currentCompany: string;
+  designation: string;
+  location: string;
+  summary: string;
+  resumeScore: number; // 0-100
+}
+
+export interface CandidateFromResume extends Omit<Candidate, "id" | "code" | "createdAt"> {
+  resumeFilePath: string;
+  aiAnalysis: ResumeAnalysisResult;
+}

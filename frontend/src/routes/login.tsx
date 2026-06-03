@@ -26,7 +26,7 @@ function LoginPage() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { email: "admin@hrr.app", password: "admin123" },
+    defaultValues: { email: "admin@company.com", password: "Admin@123" },
   });
 
   async function onSubmit(values: FormData) {
@@ -43,8 +43,8 @@ function LoginPage() {
   }
 
   function quickFill(role: "ADMIN" | "HR") {
-    if (role === "ADMIN") form.reset({ email: "admin@hrr.app", password: "admin123" });
-    else form.reset({ email: "hr@hrr.app", password: "hr123" });
+    if (role === "ADMIN") form.reset({ email: "admin@company.com", password: "Admin@123" });
+    else form.reset({ email: "hr@company.com", password: "Hr@123" });
   }
 
   return (
@@ -163,11 +163,11 @@ function LoginPage() {
             <div className="mt-3 grid grid-cols-2 gap-2">
               <button onClick={() => quickFill("ADMIN")} className="rounded-lg border border-border bg-background px-3 py-2 text-left text-xs transition hover:border-primary/40">
                 <p className="font-semibold text-foreground">Admin</p>
-                <p className="text-muted-foreground">admin@hrr.app</p>
+                <p className="text-muted-foreground">admin@company.com</p>
               </button>
               <button onClick={() => quickFill("HR")} className="rounded-lg border border-border bg-background px-3 py-2 text-left text-xs transition hover:border-primary/40">
                 <p className="font-semibold text-foreground">HR</p>
-                <p className="text-muted-foreground">hr@hrr.app</p>
+                <p className="text-muted-foreground">hr@company.com</p>
               </button>
             </div>
           </div>

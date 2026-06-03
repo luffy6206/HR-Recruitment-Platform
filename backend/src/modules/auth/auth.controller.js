@@ -8,10 +8,17 @@ import {
 export const login = async (req, res, next) => {
   try {
     const result = await authService.loginUser(req.body);
+    const { accessToken, refreshToken, user } = result;
+    const safeUser = {
+      id: user._id?.toString() ?? user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
 
     return successResponse(
       res,
-      result,
+      { accessToken, refreshToken, user: safeUser },
       "Login successful"
     );
   } catch (error) {

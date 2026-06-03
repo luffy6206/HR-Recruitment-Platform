@@ -44,17 +44,17 @@ export const getDashboardData =
       }),
 
       Candidate.countDocuments({
-        currentStatus:
+        status:
           CANDIDATE_STATUS.CONTACTED,
       }),
 
       Candidate.countDocuments({
-        currentStatus:
+        status:
           CANDIDATE_STATUS.SELECTED,
       }),
 
       Candidate.countDocuments({
-        currentStatus:
+        status:
           CANDIDATE_STATUS.DROPPED,
       }),
 

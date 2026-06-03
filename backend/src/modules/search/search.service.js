@@ -7,7 +7,7 @@ export const globalSearch =
 
       $or: [
         {
-          fullName: {
+          name: {
             $regex: query,
             $options: "i",
           },

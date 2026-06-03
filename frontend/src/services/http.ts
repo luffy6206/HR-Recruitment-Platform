@@ -6,7 +6,6 @@ export const API_BASE_URL =
 
 export const http = axios.create({
   baseURL: API_BASE_URL,
-  headers: { "Content-Type": "application/json" },
 });
 
 const ACCESS_KEY = "hrr_access";
@@ -43,14 +42,50 @@ http.interceptors.request.use((config) => {
 });
 
 http.interceptors.response.use(
-  (r) => r,
+  (response) => {
+    if (
+      response?.data &&
+      typeof response.data === "object" &&
+      "success" in response.data &&
+      "data" in response.data
+    ) {
+      response.data = (response.data as any).data;
+    }
+    return response;
+  },
   async (error) => {
+    const originalRequest = error?.config as any;
+
     if (error?.response?.status === 401 && typeof window !== "undefined") {
+      if (originalRequest && !originalRequest._retry) {
+        originalRequest._retry = true;
+        const refreshToken = tokenStore.refresh;
+        if (refreshToken) {
+          try {
+            const refreshResponse = await axios.post(
+              `${API_BASE_URL}/auth/refresh`,
+              { refreshToken },
+              { headers: { "Content-Type": "application/json" } }
+            );
+            const accessToken = refreshResponse?.data?.data?.accessToken;
+            if (accessToken) {
+              tokenStore.set(accessToken, refreshToken);
+              originalRequest.headers = originalRequest.headers ?? {};
+              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+              return http(originalRequest);
+            }
+          } catch (refreshError) {
+            // Fall through to logout below
+          }
+        }
+      }
+
       tokenStore.clear();
       if (!window.location.pathname.startsWith("/login")) {
         window.location.href = "/login";
       }
     }
+
     return Promise.reject(error);
   },
 );
