@@ -7,14 +7,27 @@ import * as controller from "./resumeUpload.controller.js";
 
 const router = express.Router();
 
-// Configure multer for in-memory PDF storage
+// Configure multer for in-memory resume storage
+const supportedMimeTypes = new Set([
+  "application/pdf",
+  "application/octet-stream",
+  "application/x-pdf",
+  "application/vnd.adobe.pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/msword",
+  "application/vnd.ms-office",
+]);
+
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === "application/pdf") {
+    const isSupported = supportedMimeTypes.has(file.mimetype);
+    const extension = file.originalname.toLowerCase().split(".").pop();
+
+    if (isSupported || extension === "pdf" || extension === "docx" || extension === "doc") {
       cb(null, true);
     } else {
-      cb(new Error("Only PDF files are allowed"), false);
+      cb(new Error("Only PDF and DOCX files are allowed"), false);
     }
   },
   limits: {
@@ -31,7 +44,7 @@ router.post(
   "/upload-resumes",
   protect,
   authorize(ROLES.ADMIN, ROLES.HR),
-  upload.array("resumes", 50), // Max 50 files
+  upload.array("resumes", 10),
   controller.uploadResumes
 );
 

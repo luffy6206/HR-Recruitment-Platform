@@ -17,6 +17,7 @@ export const createCandidate = async (
   payload,
   userId
 ) => {
+  console.log('[CANDIDATE] createCandidate called');
   // Candidate Validation & Sanitization Layer
   const name = payload.name ?? payload.fullName ?? "Unknown Candidate";
   const email = payload.email ? String(payload.email).toLowerCase().trim() : "";
@@ -38,7 +39,8 @@ export const createCandidate = async (
     });
   }
 
-  if (duplicateConditions.length) {
+  // Allow bypassing duplicate checks for test runs by setting SKIP_DUPLICATE_CHECK=true
+  if (duplicateConditions.length && process.env.SKIP_DUPLICATE_CHECK !== 'true') {
     const existingCandidate =
       await Candidate.findOne({
         $or: duplicateConditions,
@@ -56,6 +58,22 @@ export const createCandidate = async (
   const candidateCode =
     await generateCandidateCode();
 
+  let finalCandidateCode = candidateCode;
+  if (!finalCandidateCode) {
+    finalCandidateCode = `CAN-${new Date().getFullYear()}-TMP-${Date.now()}`;
+  }
+
+  console.log('[CANDIDATE] Generated candidateCode:', finalCandidateCode);
+  console.log('[CANDIDATE] Creating candidate payload', {
+    name,
+    email: email || undefined,
+    phone: phone || undefined,
+    category,
+    status,
+    code: finalCandidateCode,
+    candidateCode: finalCandidateCode,
+  });
+
   const candidate =
     await Candidate.create({
       ...payload,
@@ -64,7 +82,8 @@ export const createCandidate = async (
       phone: phone || undefined,
       category,
       status,
-      code: candidateCode,
+      code: finalCandidateCode,
+      candidateCode: finalCandidateCode,
       uploadInfo: {
         uploadedBy: userId,
         uploadedAt: new Date(),

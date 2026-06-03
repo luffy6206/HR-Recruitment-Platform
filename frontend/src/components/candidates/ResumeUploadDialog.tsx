@@ -33,8 +33,13 @@ export function ResumeUploadDialog({
 
   const validateFile = (file: File): boolean => {
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-    if (file.type !== "application/pdf") {
-      setError("Only PDF files allowed");
+    const fileName = file.name.toLowerCase();
+    const isPdf = file.type === "application/pdf" || fileName.endsWith(".pdf");
+    const isDocx = file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileName.endsWith(".docx");
+    const isDoc = file.type === "application/msword" || fileName.endsWith(".doc");
+
+    if (!isPdf && !isDocx && !isDoc) {
+      setError("Only PDF and DOCX files are allowed");
       return false;
     }
     if (file.size === 0) {
@@ -115,13 +120,13 @@ export function ResumeUploadDialog({
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-            <p className="text-sm font-medium">Click to select PDFs</p>
+            <p className="text-sm font-medium">Click to select PDF or DOCX files</p>
             <p className="text-xs text-gray-500">or drag and drop</p>
             <input
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".pdf"
+              accept=".pdf,.doc,.docx"
               onChange={handleFileSelect}
               className="hidden"
               disabled={isLoading}

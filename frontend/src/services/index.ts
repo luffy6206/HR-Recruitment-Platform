@@ -58,11 +58,23 @@ export const dashboardService = {
   async get(): Promise<DashboardStats> { await delay(); return mockStats(); },
 };
 
+const normalizeCandidate = (candidate: any): Candidate => ({
+  id: candidate._id ?? candidate.id ?? "",
+  code: candidate.code ?? "",
+  name: candidate.name ?? "Unknown Candidate",
+  email: candidate.email ?? "",
+  phone: candidate.phone ?? "",
+  category: candidate.category ?? "General",
+  status: candidate.status ?? "NEW",
+  createdAt: candidate.createdAt ?? new Date().toISOString(),
+  assignedTo: candidate.assignedHR ?? undefined,
+});
+
 // ---- Candidates ----
 export const candidateService = {
   async list(): Promise<Candidate[]> {
     const response = await http.get("/candidates");
-    return response.data.candidates ?? [];
+    return (response.data.candidates ?? []).map(normalizeCandidate);
   },
 
   async get(id: string): Promise<{
@@ -72,17 +84,20 @@ export const candidateService = {
     audits: AuditEntry[];
   }> {
     const response = await http.get(`/candidates/${id}`);
-    return response.data;
+    return {
+      ...response.data,
+      candidate: normalizeCandidate(response.data.candidate),
+    };
   },
 
   async create(data: Omit<Candidate, "id" | "code" | "status" | "createdAt">): Promise<Candidate> {
     const response = await http.post("/candidates", data);
-    return response.data;
+    return normalizeCandidate(response.data);
   },
 
   async update(id: string, patch: Partial<Candidate>): Promise<Candidate> {
     const response = await http.patch(`/candidates/${id}`, patch);
-    return response.data;
+    return normalizeCandidate(response.data);
   },
 
   async remove(id: string): Promise<void> {

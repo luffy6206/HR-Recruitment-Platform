@@ -53,7 +53,20 @@ function CandidatesPage() {
   const resumeUploadMut = useResumeUpload({
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["candidates"] });
-      toast.success(`${data.imported} candidates imported successfully`);
+      if (data.imported > 0) {
+        toast.success(
+          `${data.imported} candidate${data.imported === 1 ? "" : "s"} imported successfully${
+            data.failed > 0 ? `, ${data.failed} failed` : ""
+          }`
+        );
+      } else if (data.failed > 0) {
+        toast.error(
+          `${data.failed} resume${data.failed === 1 ? "" : "s"} could not be imported. ` +
+            "Check the upload errors and try a different resume."
+        );
+      } else {
+        toast.success("No resumes were imported.");
+      }
       setResumeDialogOpen(false);
       setUploadProgress(0);
     },
@@ -241,7 +254,9 @@ function CandidatesPage() {
       <ResumeUploadDialog
         open={resumeDialogOpen}
         onOpenChange={setResumeDialogOpen}
-        onFilesSelected={(files) => resumeUploadMut.mutateAsync(files)}
+        onFilesSelected={async (files) => {
+          await resumeUploadMut.mutateAsync(files);
+        }}
         isLoading={resumeUploadMut.isPending}
       />
     </>

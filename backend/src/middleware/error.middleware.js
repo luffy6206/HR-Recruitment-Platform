@@ -4,6 +4,12 @@ const errorHandler = (
   res,
   next
 ) => {
+  // Log the error for diagnostics
+  try {
+    console.error('[ERROR MIDDLEWARE] ', err && err.stack ? err.stack : err);
+  } catch (e) {
+    // ignore logging failures
+  }
   const statusCode =
     err.statusCode || 500;
 

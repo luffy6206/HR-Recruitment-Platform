@@ -1,84 +1,142 @@
 import asyncHandler from "../../shared/utils/asyncHandler.js";
-import { successResponse } from "../../shared/response/apiResponse.js";
+import { successResponse, errorResponse } from "../../shared/response/apiResponse.js";
 import AppError from "../../shared/errors/AppError.js";
 import { resumeParserService } from "../../services/resumeParser.service.js";
 import { openaiResumeAnalyzerService } from "../../services/openaiResumeAnalyzer.service.js";
-import Candidate from "./candidate.model.js";
+import { createCandidate } from "./candidate.service.js";
 import crypto from "crypto";
-import { generateCandidateCode } from "../../shared/services/candidateCode.service.js";
+import fs from "fs/promises";
+import path from "path";
 
 /**
- * Upload and process multiple resume PDFs
- * Extracts text, analyzes with OpenAI, creates candidates
+ * Upload and process multiple resume files
+ * Extracts text, analyzes with Gemini, creates candidates
  */
 export const uploadResumes = asyncHandler(async (req, res) => {
-  const files = req.files;
+  console.log("[UPLOAD] Upload request received");
+  const uploadLog = {
+    timestamp: new Date().toISOString(),
+    files: [],
+    stages: [],
+  };
+  console.log("[UPLOAD] Body:", req.body);
+  console.log(
+    "[UPLOAD] Files:",
+    Array.isArray(req.files)
+      ? req.files.map((file) => ({
+          fieldname: file.fieldname,
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+        }))
+      : req.files
+  );
+  console.log(
+    "[UPLOAD] File property:",
+    req.file
+      ? {
+          fieldname: req.file.fieldname,
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+        }
+      : null
+  );
+
+  const files = Array.isArray(req.files)
+    ? req.files
+    : req.file
+    ? [req.file]
+    : [];
 
   if (!files || files.length === 0) {
     throw new AppError("No files provided", 400);
   }
 
-  // Process each resume
+  await resumeParserService.ensureUploadDirExists();
+
   const results = [];
   let successCount = 0;
   let failedCount = 0;
 
   for (const file of files) {
     try {
-      // 1. Parse PDF and extract text
-      const resumeText = await resumeParserService.extractTextFromPDF(file.buffer);
+      const fileLog = { fileName: file.originalname };
+      console.log(
+        `[UPLOAD] Received file: ${file.originalname} (${file.mimetype}, ${file.size} bytes)`
+      );
+      uploadLog.files.push({ fileName: file.originalname, mimeType: file.mimetype, size: file.size });
 
-      // 2. Analyze with OpenAI
+      const resumeText = await resumeParserService.extractTextFromFile(
+        file.buffer,
+        file.mimetype,
+        file.originalname
+      );
+
+      console.log(
+        `[UPLOAD] Extracted resume text for ${file.originalname}: ${resumeText.length} chars`
+      );
+      console.log(
+        `[UPLOAD] Resume preview: ${resumeText
+          .slice(0, 300)
+          .replace(/\n/g, " ")}`
+      );
+      fileLog.extracted = { length: resumeText.length, preview: resumeText.slice(0, 300) };
+      uploadLog.stages.push({ stage: 'pdf_extraction', file: file.originalname, length: resumeText.length });
+
       const analysis = await openaiResumeAnalyzerService.analyzeResume(resumeText);
+      // capture AI analysis summary if available
+      uploadLog.stages.push({ stage: 'ai_analysis', file: file.originalname, model: analysis?.model || null, promptPreview: analysis?.promptPreview || null, raw: analysis?.raw || null });
 
-      // 3. Check for duplicate by email
-      if (analysis.email) {
-        const existing = await Candidate.findOne({
-          email: analysis.email.toLowerCase(),
-        });
+      const safeName = analysis.name?.trim() || "Unknown Candidate";
+      const safeEmail = analysis.email
+        ? analysis.email.toLowerCase().trim()
+        : `unknown-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
+      const safePhone = analysis.phone?.trim() || "000-000-0000";
 
-        if (existing) {
-          results.push({
-            name: analysis.name,
-            email: analysis.email,
-            code: existing.code,
-            errors: ["Candidate with this email already exists"],
-          });
-          failedCount++;
-          continue;
-        }
-      }
+      console.log(
+        `[UPLOAD] Resolved candidate info: ${safeName}, ${safeEmail}, ${safePhone}`
+      );
+      fileLog.resolved = { name: safeName, email: safeEmail, phone: safePhone };
 
-      // 4. Save PDF file
-      const filePath = await resumeParserService.savePDFFile(file.buffer, file.originalname);
+      const filePath = await resumeParserService.saveResumeFile(
+        file.buffer,
+        file.originalname
+      );
+      fileLog.savedPath = filePath;
 
-      // 5. Create candidate record
-      const emailHash = analysis.email ? crypto.createHash("md5").update(analysis.email.toLowerCase()).digest("hex") : null;
-      const candidateCode = await generateCandidateCode();
-
-      const candidate = new Candidate({
-        code: candidateCode,
-        name: analysis.name || "Unknown Candidate",
-        email: analysis.email || "",
-        phone: analysis.phone || "",
+      const candidatePayload = {
+        name: safeName,
+        email: safeEmail,
+        phone: safePhone,
         category: analysis.designation || "Imported from Resume",
         status: "NEW",
+        source: "RESUME",
         resumeFilePath: filePath,
         aiAnalysis: {
           skills: Array.isArray(analysis.skills) ? analysis.skills : [],
-          experienceYears: parseInt(analysis.experienceYears) || 0,
+          experienceYears: Math.max(0, parseInt(analysis.experienceYears) || 0),
           education: analysis.education || "",
           currentCompany: analysis.currentCompany || "",
           designation: analysis.designation || "",
           location: analysis.location || "",
           summary: analysis.summary || "",
-          resumeScore: parseInt(analysis.resumeScore) || 0,
+          resumeScore: Math.min(100, Math.max(0, parseInt(analysis.resumeScore) || 0)),
           analyzedAt: new Date(),
         },
-        emailHash,
-      });
+        emailHash: analysis.email
+          ? crypto.createHash("md5").update(analysis.email.toLowerCase()).digest("hex")
+          : null,
+      };
 
-      await candidate.save();
+      console.log(`[UPLOAD] Candidate insert starting for ${safeName}`);
+      uploadLog.stages.push({ stage: 'candidate_mapping', file: file.originalname, payload: candidatePayload });
+      const candidate = await createCandidate(candidatePayload, req.user.id);
+      console.log(
+        `[UPLOAD] Candidate insert success: ${candidate._id} (${candidate.name})`
+      );
+      fileLog.insert = { id: candidate._id.toString(), code: candidate.code };
+      uploadLog.stages.push({ stage: 'candidate_insert', file: file.originalname, id: candidate._id.toString(), code: candidate.code });
 
       results.push({
         id: candidate._id,
@@ -86,25 +144,79 @@ export const uploadResumes = asyncHandler(async (req, res) => {
         email: candidate.email,
         code: candidate.code,
       });
+      // attach fileLog to results for later persistence
+      fileLog.result = { id: candidate._id.toString(), name: candidate.name, email: candidate.email, code: candidate.code };
+      uploadLog.files = uploadLog.files.map(f => f.fileName === file.originalname ? { ...f, ...fileLog } : f);
 
       successCount++;
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown upload error";
+      console.error(
+        `[UPLOAD] Failed processing ${file?.originalname ?? "unknown file"}: ${message}`,
+        error
+      );
+      uploadLog.files = uploadLog.files.map(f => f.fileName === file?.originalname ? { ...f, errors: [message] } : f);
       failedCount++;
       results.push({
         fileName: file.originalname,
-        errors: [error.message],
+        errors: [message],
       });
     }
   }
 
+  const responseData = {
+    imported: successCount,
+    failed: failedCount,
+    candidates: results,
+  };
+
+  // Attach detailed upload log (always in dev runs)
+  responseData.uploadLog = uploadLog;
+
+  const isDuplicateOnlyUpload =
+    successCount === 0 &&
+    failedCount > 0 &&
+    results.every(
+      (result) =>
+        result.errors?.length === 1 &&
+        result.errors[0] === "Candidate already exists"
+    );
+
+  if (isDuplicateOnlyUpload) {
+    return successResponse(
+      res,
+      responseData,
+      `No new candidates were imported. ${failedCount} resume${
+        failedCount === 1 ? "" : "s"
+      } matched existing candidate records.`
+    );
+  }
+
+  if (successCount === 0) {
+    return errorResponse(
+      res,
+      "No candidates were imported. Check the upload errors and try again.",
+      400,
+      responseData
+    );
+  }
+
+  // persist upload log for traceability
+  try {
+    const logsDir = path.join(process.cwd(), 'logs');
+    await fs.mkdir(logsDir, { recursive: true });
+    const outPath = path.join(logsDir, `upload-${Date.now()}.json`);
+    await fs.writeFile(outPath, JSON.stringify(uploadLog, null, 2), 'utf8');
+    console.log('[UPLOAD] Detailed upload log written to', outPath);
+  } catch (e) {
+    console.error('[UPLOAD] Failed to write upload log', e);
+  }
+
   return successResponse(
     res,
-    {
-      success: true,
-      imported: successCount,
-      failed: failedCount,
-      candidates: results,
-    },
-    `${successCount} candidates imported successfully${failedCount > 0 ? `, ${failedCount} failed` : ""}`
+    responseData,
+    `${successCount} candidate${successCount === 1 ? "" : "s"} imported successfully${
+      failedCount > 0 ? `, ${failedCount} failed` : ""
+    }`
   );
 });

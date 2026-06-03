@@ -94,6 +94,12 @@ const candidateSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Legacy candidate code field (kept for compatibility with older indexes)
+    candidateCode: {
+      type: String,
+      default: null,
+    },
+
     // AI Analysis
     aiAnalysis: {
       skills: [String],
