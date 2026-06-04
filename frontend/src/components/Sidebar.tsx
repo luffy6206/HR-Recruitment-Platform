@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useLocation } from "react-router-dom";
 import {
   Activity, Bell, Briefcase, CalendarCheck, ChartPie, LayoutDashboard, ListChecks, Settings, Users,
 } from "lucide-react";
@@ -18,7 +18,8 @@ const NAV: NavItem[] = [
 ];
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const location = useLocation();
+  const pathname = location.pathname;
   const { user } = useAuth();
 
   return (
@@ -57,7 +58,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               return (
                 <li key={item.to}>
                   <Link
-                    to={item.to as any}
+                    to={item.to}
                     onClick={onClose}
                     className={cn(
                       "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all",

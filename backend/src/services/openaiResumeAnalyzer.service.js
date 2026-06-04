@@ -165,8 +165,22 @@ export const openaiResumeAnalyzerService = {
       "currentCompany": "string or null",
       "designation": "string or null",
       "location": "string or null",
+      "linkedin": "string or null",
+      "github": "string or null",
+      "projects": ["string"],
+      "certifications": ["string"],
       "summary": "string (2-3 sentences max)",
-      "resumeScore": number
+      "resumeScore": number,
+      "confidenceScores": {
+        "name": number,
+        "email": number,
+        "phone": number,
+        "skills": number,
+        "experienceYears": number,
+        "education": number,
+        "linkedin": number,
+        "github": number
+      }
     }
 
     Resume Text:
@@ -182,8 +196,13 @@ export const openaiResumeAnalyzerService = {
     7. currentCompany: Current or last company name (null if not found)
     8. designation: Current or last job title (null if not found)
     9. location: City/Country (null if not found)
-    10. summary: Brief 2-3 sentence summary of candidate
-    11. resumeScore: Score 0-100 based on completeness (100 = complete, 50 = partial, 0 = minimal)
+    10. linkedin: LinkedIn profile URL (null if not found)
+    11. github: GitHub profile URL (null if not found)
+    12. projects: Array of significant project names/titles
+    13. certifications: Array of certification names
+    14. summary: Brief 2-3 sentence summary of candidate
+    15. resumeScore: Score 0-100 based on completeness (100 = complete, 50 = partial, 0 = minimal)
+    16. confidenceScores: Score 0-100 for each field indicating how confident you are in the extracted value
 
     Return ONLY the JSON object, nothing else.`;
 
@@ -315,11 +334,26 @@ export const openaiResumeAnalyzerService = {
         location: analysis.location
           ? String(analysis.location).trim()
           : null,
+        linkedin: analysis.linkedin
+          ? String(analysis.linkedin).trim()
+          : null,
+        github: analysis.github
+          ? String(analysis.github).trim()
+          : null,
+        projects: Array.isArray(analysis.projects)
+          ? analysis.projects.filter((p) => p)
+          : [],
+        certifications: Array.isArray(analysis.certifications)
+          ? analysis.certifications.filter((c) => c)
+          : [],
         summary: analysis.summary ? String(analysis.summary).trim() : "",
         resumeScore: Math.min(
           100,
           Math.max(0, parseInt(analysis.resumeScore) || 0)
         ),
+        confidenceScores: typeof analysis.confidenceScores === 'object' && analysis.confidenceScores !== null
+          ? analysis.confidenceScores
+          : {},
       };
 
       // Attach metadata for observability

@@ -6,6 +6,7 @@ import validateRequest from "../../shared/utils/validateRequest.js";
 
 import {
   createInterviewValidation,
+  evaluateInterviewValidation,
 } from "./interview.validation.js";
 
 import * as controller from "./interview.controller.js";
@@ -25,6 +26,14 @@ router.patch(
   "/:id/complete",
   protect,
   controller.completeInterview
+);
+
+router.patch(
+  "/:id/evaluate",
+  protect,
+  evaluateInterviewValidation,
+  validateRequest,
+  controller.evaluateInterview
 );
 
 export default router;

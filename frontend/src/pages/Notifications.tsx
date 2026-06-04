@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/layouts/AppShell";
 import { PageHeader } from "@/components/PageHeader";
@@ -7,10 +7,7 @@ import { Bell, CheckCheck, CheckCircle2, AlertTriangle, Info, XCircle } from "lu
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/notifications")({
-  head: () => ({ meta: [{ title: "Notifications — Talentflow" }] }),
-  component: () => <AppShell><NotificationsPage /></AppShell>,
-});
+
 
 const ICONS = {
   INFO: { I: Info, c: "text-info bg-info/10" },
@@ -19,7 +16,7 @@ const ICONS = {
   DANGER: { I: XCircle, c: "text-destructive bg-destructive/10" },
 } as const;
 
-function NotificationsPage() {
+export default function NotificationsPage() {
   const qc = useQueryClient();
   const { data: items = [] } = useQuery({ queryKey: ["notifications"], queryFn: () => notificationService.list() });
   const markAll = useMutation({

@@ -19,6 +19,18 @@ export const updateProfileFromResume =
 
         experience:
           extractedData.experience,
+          
+        projects:
+          extractedData.projects,
+          
+        certifications:
+          extractedData.certifications,
+          
+        linkedin:
+          extractedData.linkedin,
+          
+        github:
+          extractedData.github,
       },
       {
         new: true,

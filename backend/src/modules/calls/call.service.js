@@ -40,6 +40,13 @@ export const createCall =
           payload.candidateId,
       });
 
+    if (previousCalls >= 3) {
+      throw new AppError(
+        "Maximum call attempts reached",
+        400
+      );
+    }
+
     const attemptNumber =
       previousCalls + 1;
 
@@ -71,31 +78,51 @@ export const createCall =
       payload.interestStatus ===
       INTEREST_STATUS.INTERESTED
     ) {
+      const doneStatus =
+        attemptNumber === 1
+          ? CANDIDATE_STATUS.FIRST_CALL_DONE
+          : attemptNumber === 2
+          ? CANDIDATE_STATUS.SECOND_CALL_DONE
+          : CANDIDATE_STATUS.THIRD_CALL_DONE;
+
       await changeCandidateStatus(
         payload.candidateId,
-
-        CANDIDATE_STATUS.CONTACTED,
-
+        doneStatus,
         userId,
-
         "Candidate interested"
       );
+    } else {
+      if (attemptNumber === 1) {
+        await changeCandidateStatus(
+          payload.candidateId,
+          CANDIDATE_STATUS.SECOND_CALL_PENDING,
+          userId,
+          "First call attempt logged"
+        );
+      } else if (attemptNumber === 2) {
+        await changeCandidateStatus(
+          payload.candidateId,
+          CANDIDATE_STATUS.THIRD_CALL_PENDING,
+          userId,
+          "Second call attempt logged"
+        );
+      } else if (
+        attemptNumber === 3 &&
+        payload.outcome === CALL_OUTCOMES.NOT_PICKED
+      ) {
+        await changeCandidateStatus(
+          payload.candidateId,
+          CANDIDATE_STATUS.DROPPED,
+          userId,
+          "Call Not Picked"
+        );
+      }
     }
 
     if (
       payload.interestStatus ===
       INTEREST_STATUS.NEEDS_FOLLOW_UP
     ) {
-      await changeCandidateStatus(
-        payload.candidateId,
-
-        CANDIDATE_STATUS.FOLLOW_UP,
-
-        userId,
-
-        "Follow up required"
-      );
-
       await createNotification({
         userId,
 
@@ -108,22 +135,6 @@ export const createCall =
         type:
           "FOLLOW_UP",
       });
-    }
-
-    if (
-      payload.outcome ===
-        CALL_OUTCOMES.NOT_PICKED &&
-      attemptNumber >= 3
-    ) {
-      await changeCandidateStatus(
-        payload.candidateId,
-
-        CANDIDATE_STATUS.DROPPED,
-
-        userId,
-
-        "Three unsuccessful call attempts"
-      );
     }
 
     return call;

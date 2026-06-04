@@ -1,14 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+
 import { AppShell } from "@/layouts/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Settings — Talentflow" }] }),
-  component: () => <AppShell><SettingsPage /></AppShell>,
-});
+
 
 function Field({ label, defaultValue, type = "text" }: { label: string; defaultValue?: string; type?: string }) {
   return (
@@ -48,7 +45,7 @@ function Save() {
   );
 }
 
-function SettingsPage() {
+export default function SettingsPage() {
   const { user } = useAuth();
   return (
     <>

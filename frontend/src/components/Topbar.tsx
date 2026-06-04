@@ -1,6 +1,6 @@
 import { Bell, LogOut, Menu, Search, Settings, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "react-router-dom";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -71,14 +71,14 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
               <div className="text-xs font-normal text-muted-foreground">{user?.email}</div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate({ to: "/settings" })}>
+            <DropdownMenuItem onClick={() => navigate("/settings")}>
               <UserIcon className="mr-2 size-4" /> Profile
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate({ to: "/settings" })}>
+            <DropdownMenuItem onClick={() => navigate("/settings")}>
               <Settings className="mr-2 size-4" /> Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => { logout(); navigate({ to: "/login" }); }} className="text-destructive">
+            <DropdownMenuItem onClick={() => { logout(); navigate("/login"); }} className="text-destructive">
               <LogOut className="mr-2 size-4" /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>

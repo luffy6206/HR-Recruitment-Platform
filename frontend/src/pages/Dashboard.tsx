@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity, CalendarCheck, CheckCircle2, ChevronRight, ListChecks, TrendingUp, UserPlus, Users, XCircle,
@@ -12,16 +12,13 @@ import { DashboardCard } from "@/components/DashboardCard";
 import { candidateService, dashboardService, interviewService, reportService, taskService } from "@/services";
 import { StatusBadge } from "@/components/StatusBadge";
 import { format, formatDistanceToNow } from "date-fns";
-import { Link } from "@tanstack/react-router";
+import { Link } from "react-router-dom";
 
-export const Route = createFileRoute("/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — Talentflow" }] }),
-  component: () => <AppShell><DashboardPage /></AppShell>,
-});
+
 
 const PIE_COLORS = ["oklch(0.55 0.24 305)", "oklch(0.78 0.16 78)", "oklch(0.65 0.17 240)", "oklch(0.72 0.18 150)", "oklch(0.63 0.23 25)", "oklch(0.6 0.05 280)"];
 
-function DashboardPage() {
+export default function DashboardPage() {
   const { data: stats } = useQuery({ queryKey: ["dashboard"], queryFn: () => dashboardService.get() });
   const { data: candidates = [] } = useQuery({ queryKey: ["candidates"], queryFn: () => candidateService.list() });
   const { data: interviews = [] } = useQuery({ queryKey: ["interviews"], queryFn: () => interviewService.list() });
@@ -204,8 +201,7 @@ function DashboardPage() {
           {recentActivity.map((c) => (
             <Link
               key={c.id}
-              to={"/candidates/$id" as any}
-              params={{ id: c.id } as any}
+              to={`/candidates/${c.id}`}
               className="flex items-center gap-3 p-4 transition hover:bg-muted/40"
             >
               <div className="grid size-10 place-items-center rounded-full gradient-primary text-sm font-semibold text-primary-foreground">

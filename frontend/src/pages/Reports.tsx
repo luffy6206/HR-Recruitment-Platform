@@ -1,18 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/layouts/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { reportService } from "@/services";
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 
-export const Route = createFileRoute("/reports")({
-  head: () => ({ meta: [{ title: "Reports — Talentflow" }] }),
-  component: () => <AppShell><ReportsPage /></AppShell>,
-});
+
 
 const COLORS = ["oklch(0.55 0.24 305)", "oklch(0.78 0.16 78)", "oklch(0.65 0.17 240)", "oklch(0.72 0.18 150)", "oklch(0.63 0.23 25)"];
 
-function ReportsPage() {
+export default function ReportsPage() {
   const { data } = useQuery({ queryKey: ["reports"], queryFn: () => reportService.get() });
 
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,13 +8,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const location = useLocation();
+  const pathname = location.pathname;
 
   useEffect(() => { setOpen(false); }, [pathname]);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      navigate({ to: "/login", search: { redirect: pathname } as any });
+      navigate(`/login?redirect=${pathname}`);
     }
   }, [loading, isAuthenticated, navigate, pathname]);
 

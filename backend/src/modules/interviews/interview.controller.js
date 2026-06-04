@@ -37,3 +37,19 @@ export const completeInterview =
       "Interview completed"
     );
   });
+
+export const evaluateInterview =
+  asyncHandler(async (req, res) => {
+    const interview =
+      await interviewService.evaluateInterview(
+        req.params.id,
+        req.body,
+        req.user.id
+      );
+
+    return successResponse(
+      res,
+      interview,
+      "Interview evaluated"
+    );
+  });

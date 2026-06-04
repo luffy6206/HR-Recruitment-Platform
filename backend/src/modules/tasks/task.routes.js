@@ -6,6 +6,7 @@ import validateRequest from "../../shared/utils/validateRequest.js";
 
 import {
   createTaskValidation,
+  evaluateTaskValidation,
 } from "./task.validation.js";
 
 import * as controller from "./task.controller.js";
@@ -30,6 +31,8 @@ router.patch(
 router.patch(
   "/:id/review",
   protect,
+  evaluateTaskValidation,
+  validateRequest,
   controller.reviewTask
 );
 

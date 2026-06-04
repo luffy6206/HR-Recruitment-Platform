@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,12 +13,9 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
-export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Sign in — Talentflow" }] }),
-  component: LoginPage,
-});
 
-function LoginPage() {
+
+export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [showPw, setShowPw] = useState(false);
@@ -34,7 +31,7 @@ function LoginPage() {
     try {
       await login(values.email, values.password);
       toast.success("Welcome back");
-      navigate({ to: "/dashboard" });
+      navigate("/dashboard");
     } catch (e: any) {
       toast.error(e?.message ?? "Login failed");
     } finally {

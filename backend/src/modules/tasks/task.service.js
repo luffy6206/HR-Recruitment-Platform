@@ -1,5 +1,6 @@
 import Task from "./task.model.js";
 import { createNotification } from "../notifications/notification.service.js";
+import { createAuditLog } from "../../shared/services/audit.service.js";
 
 import Candidate from "../candidates/candidate.model.js";
 
@@ -108,7 +109,7 @@ export const submitTask =
 
     await changeCandidateStatus(
       task.candidateId,
-      CANDIDATE_STATUS.TASK_SUBMITTED,
+      CANDIDATE_STATUS.TASK_REVIEW,
       userId,
       "Task submitted"
     );
@@ -123,9 +124,7 @@ export const reviewTask =
     userId
   ) => {
     const task =
-      await Task.findById(
-        taskId
-      );
+      await Task.findById(taskId);
 
     if (!task) {
       throw new AppError(
@@ -134,18 +133,143 @@ export const reviewTask =
       );
     }
 
-    task.status =
-      payload.passed
-        ? "PASSED"
-        : "FAILED";
+    if (task.status !== "SUBMITTED") {
+      throw new AppError(
+        "Task must be in SUBMITTED status to review",
+        400
+      );
+    }
 
-    task.score =
-      payload.score;
+    const { outcome } = payload;
+    const oldOutcome = task.reviewOutcome;
 
-    task.reviewNotes =
-      payload.reviewNotes;
+    // --- SATISFIED ---
+    if (outcome === "SATISFIED") {
+      task.status = "PASSED";
+      task.reviewOutcome = "SATISFIED";
+      task.reviewNotes = payload.reviewNotes || null;
+      task.score = payload.score || null;
+      await task.save();
 
-    await task.save();
+      await createAuditLog({
+        candidateId: task.candidateId,
+        fieldName: "task.reviewOutcome",
+        oldValue: oldOutcome || "NONE",
+        newValue: outcome,
+        changedBy: userId,
+        reason: payload.reviewNotes || ""
+      });
 
-    return task;
+      await changeCandidateStatus(
+        task.candidateId,
+        CANDIDATE_STATUS.SELECTED,
+        userId,
+        "Task passed — candidate selected"
+      );
+
+      await createTimelineEvent({
+        candidateId: task.candidateId,
+        eventType: TIMELINE_EVENTS.TASK_PASSED,
+        title: "Task Passed",
+        description: "Task review outcome: SATISFIED — candidate selected",
+        performedBy: userId,
+      });
+
+      return task;
+    }
+
+    // --- FAILED ---
+    if (outcome === "FAILED") {
+      task.status = "FAILED";
+      task.reviewOutcome = "FAILED";
+      task.reviewReason = payload.reason;
+      task.reviewNotes = payload.reviewNotes || null;
+      task.score = payload.score || null;
+      await task.save();
+
+      await createAuditLog({
+        candidateId: task.candidateId,
+        fieldName: "task.reviewOutcome",
+        oldValue: oldOutcome || "NONE",
+        newValue: outcome,
+        changedBy: userId,
+        reason: payload.reason || payload.reviewNotes || ""
+      });
+
+      await changeCandidateStatus(
+        task.candidateId,
+        CANDIDATE_STATUS.DROPPED,
+        userId,
+        payload.reason
+      );
+
+      await createTimelineEvent({
+        candidateId: task.candidateId,
+        eventType: TIMELINE_EVENTS.TASK_FAILED,
+        title: "Task Failed",
+        description: `Task review outcome: FAILED — ${payload.reason}`,
+        performedBy: userId,
+      });
+
+      return task;
+    }
+
+    // --- NEEDS_IMPROVEMENT ---
+    if (outcome === "NEEDS_IMPROVEMENT") {
+      task.status = "REVIEWED";
+      task.reviewOutcome = "NEEDS_IMPROVEMENT";
+      task.reviewReason = payload.reason || null;
+      task.reviewNotes = payload.reviewNotes || null;
+      task.score = payload.score || null;
+      await task.save();
+
+      await createAuditLog({
+        candidateId: task.candidateId,
+        fieldName: "task.reviewOutcome",
+        oldValue: oldOutcome || "NONE",
+        newValue: outcome,
+        changedBy: userId,
+        reason: payload.reason || payload.reviewNotes || ""
+      });
+
+      // Create a new re-task preserving full history
+      const reTask = await Task.create({
+        candidateId: task.candidateId,
+        assignedBy: task.assignedBy,
+        title: task.title,
+        description: task.description,
+        deadline: payload.newDeadline,
+        reTaskOf: task._id,
+        status: "ASSIGNED",
+      });
+
+      await createAuditLog({
+        candidateId: task.candidateId,
+        fieldName: "task.reTaskCreated",
+        oldValue: "NONE",
+        newValue: reTask._id.toString(),
+        changedBy: userId,
+        reason: "Re-task created due to NEEDS_IMPROVEMENT outcome"
+      });
+
+      // Candidate remains active — set back to TASK_ASSIGNED
+      await changeCandidateStatus(
+        task.candidateId,
+        CANDIDATE_STATUS.TASK_ASSIGNED,
+        userId,
+        "Re-task assigned after review"
+      );
+
+      await createTimelineEvent({
+        candidateId: task.candidateId,
+        eventType: TIMELINE_EVENTS.TASK_REWORK_REQUESTED,
+        title: "Task Rework Requested",
+        description: `Task review outcome: NEEDS_IMPROVEMENT — re-task created with new deadline`,
+        performedBy: userId,
+      });
+
+      return { originalTask: task, reTask };
+    }
+
+    throw new AppError("Invalid outcome", 400);
   };

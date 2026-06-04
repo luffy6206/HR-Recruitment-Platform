@@ -71,6 +71,13 @@ const interviewSchema =
 
         max: 10,
       },
+
+      decision: {
+        type: String,
+        enum: ["SELECT", "TASK", "DROP"],
+      },
+
+      decisionReason: String,
     },
     {
       timestamps: true,

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/layouts/AppShell";
 import { PageHeader } from "@/components/PageHeader";
@@ -6,12 +6,9 @@ import { candidateService } from "@/services";
 import { Activity as ActivityIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-export const Route = createFileRoute("/activity")({
-  head: () => ({ meta: [{ title: "Activity — Talentflow" }] }),
-  component: () => <AppShell><ActivityPage /></AppShell>,
-});
 
-function ActivityPage() {
+
+export default function ActivityPage() {
   const { data: candidates = [] } = useQuery({ queryKey: ["candidates"], queryFn: () => candidateService.list() });
 
   const feed = candidates.slice(0, 20).map((c, idx) => ({

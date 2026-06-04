@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { CalendarCheck, Plus, Video } from "lucide-react";
@@ -13,10 +13,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export const Route = createFileRoute("/interviews")({
-  head: () => ({ meta: [{ title: "Interviews — Talentflow" }] }),
-  component: () => <AppShell><InterviewsPage /></AppShell>,
-});
+
 
 const schema = z.object({
   candidateId: z.string().min(1, "Choose a candidate"),
@@ -26,7 +23,7 @@ const schema = z.object({
 });
 type Form = z.infer<typeof schema>;
 
-function InterviewsPage() {
+export default function InterviewsPage() {
   const qc = useQueryClient();
   const { data: interviews = [] } = useQuery({ queryKey: ["interviews"], queryFn: () => interviewService.list() });
   const { data: candidates = [] } = useQuery({ queryKey: ["candidates"], queryFn: () => candidateService.list() });

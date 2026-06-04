@@ -122,6 +122,11 @@ const candidateSchema = new mongoose.Schema(
         max: 100,
       },
 
+      confidenceScores: {
+        type: Map,
+        of: Number,
+      },
+
       analyzedAt: Date,
     },
 

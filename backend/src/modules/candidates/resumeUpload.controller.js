@@ -4,6 +4,7 @@ import AppError from "../../shared/errors/AppError.js";
 import { resumeParserService } from "../../services/resumeParser.service.js";
 import { openaiResumeAnalyzerService } from "../../services/openaiResumeAnalyzer.service.js";
 import { createCandidate } from "./candidate.service.js";
+import { updateProfileFromResume } from "../ai/profileUpdater.service.js";
 import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
@@ -122,6 +123,7 @@ export const uploadResumes = asyncHandler(async (req, res) => {
           location: analysis.location || "",
           summary: analysis.summary || "",
           resumeScore: Math.min(100, Math.max(0, parseInt(analysis.resumeScore) || 0)),
+          confidenceScores: analysis.confidenceScores || {},
           analyzedAt: new Date(),
         },
         emailHash: analysis.email
@@ -137,6 +139,10 @@ export const uploadResumes = asyncHandler(async (req, res) => {
       );
       fileLog.insert = { id: candidate._id.toString(), code: candidate.code };
       uploadLog.stages.push({ stage: 'candidate_insert', file: file.originalname, id: candidate._id.toString(), code: candidate.code });
+
+      console.log(`[UPLOAD] Updating candidate profile for ${safeName}`);
+      await updateProfileFromResume(candidate._id, analysis);
+      uploadLog.stages.push({ stage: 'profile_update', file: file.originalname, id: candidate._id.toString() });
 
       results.push({
         id: candidate._id,

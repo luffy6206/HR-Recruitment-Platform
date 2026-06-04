@@ -1,616 +1,377 @@
-# HR Recruitment Platform
+# HR Recruitment Platform - Project Documentation
 
 ## 1. Project Overview
 
-The HR Recruitment Platform is a full-stack HR automation system built with a decoupled backend and frontend.
+The HR Recruitment Platform is a full-stack recruitment automation and applicant tracking system (ATS). It is built with a decoupled architecture consisting of an Express-based Node.js backend and a React-based frontend. 
 
-- Backend: Node.js with Express 5, Mongoose, JWT authentication, role-based access control, and a modular feature-based structure.
-- Frontend: React 19 with Vite, TypeScript, TanStack Router / React Query, Tailwind CSS, Radix UI primitives, and component-driven pages.
-- Purpose: Manage candidates, calls, interviews, tasks, reports, notifications, and recruiter workflows for a hiring team.
-
-This repository contains two separate apps:
-- `backend/` — REST API server and persistent business logic.
-- `frontend/` — UI app with mock service implementation and client-side route structure.
+### Key Capabilities
+- **Candidate Management**: CRUD operations for candidates, categorized pipelines, and search/filter.
+- **AI Resume Parser**: Automated PDF resume upload, text extraction, and metadata extraction (skills, experience, education, score) using the Google Gemini Pro API.
+- **Hiring Workflow**: Multi-step candidate status transitions (`NEW` ➔ `CONTACTED` ➔ `INTERVIEW` ➔ `SELECTED` / `DROPPED` / `ON_HOLD`) with automated logging.
+- **Audit Logs & Timelines**: Full audit trail of candidate status and profile updates, along with historical timeline events.
+- **Task Management**: A Kanban task tracking system for recruiters.
+- **Interview Scheduling**: Scheduler for telephone, video, onsite, technical, and HR interviews.
+- **Notifications & Reports**: Analytics dashboard and notifications feed for recuiter actions.
 
 ---
 
-## 2. Folder Structure
-
-### Root
-- `README.md` — Application introduction and quick start (not fully documented here).
-- `PROJECT_DOCUMENTATION.md` — This file.
-- `generate_tree.js` — Script to generate repository tree output.
+## 2. Technology Stack
 
 ### Backend
-- `backend/package.json` — Backend dependencies and scripts.
-- `backend/src/` — Express app source code.
-- `backend/src/app.js` — Express configuration and middleware registration.
-- `backend/src/server.js` — Server startup and MongoDB connection.
-- `backend/src/config/database.js` — MongoDB connection helper.
-- `backend/src/constants/` — Shared constant definitions.
-- `backend/src/middleware/` — Authentication, authorization, upload, and error handling.
-- `backend/src/modules/` — Feature modules for auth, candidates, calls, dashboard, interviews, notifications, reports, resumes, search, tasks, users, settings, activity, health.
-- `backend/src/routes/index.js` — API router mounting all module routes.
-- `backend/src/shared/` — Utilities and standardized response/error helpers.
+- **Core Framework**: Node.js with **Express 5** (`express: ^5.2.1`) using ES Modules (`type: "module"`).
+- **Database**: MongoDB via **Mongoose** (`mongoose: ^9.6.3`).
+- **Authentication**: Role-Based Access Control (RBAC) powered by **JWT (JSON Web Tokens)** (`jsonwebtoken: ^9.0.3`) and **BcryptJS** (`bcryptjs: ^3.0.3`).
+- **AI Integration**: **Google Gemini API** (`@google/generative-ai: ^0.24.1`) for parsing resumes.
+- **PDF Parser**: `pdf-parse` (`^2.4.5`) to extract raw text from PDF files.
+- **File Upload**: `multer` for in-memory multipart handling, and `cloudinary` / `multer-storage-cloudinary` for cloud-based resume storage.
+- **Security & Logging**: `helmet` (security headers), `cors` (cross-origin sharing), `morgan` (HTTP request logging), and `express-validator` (input validation).
 
 ### Frontend
-- `frontend/package.json` — Frontend dependencies and scripts.
-- `frontend/bunfig.toml` — Bun configuration file; may be present from scaffold but not actively referenced by frontend scripts.
-- `frontend/src/` — Main frontend source.
-- `frontend/src/App.tsx` — Present but empty.
-- `frontend/src/main.tsx` — Present but empty.
-- `frontend/src/start.ts` — TanStack server middleware and error page handling.
-- `frontend/src/router.tsx` — Route definitions and page layout structure.
-- `frontend/src/routeTree.gen.ts` — Generated route configuration helper.
-- `frontend/src/styles.css` — Tailwind / global CSS.
-- `frontend/src/components/` — Reusable UI components and layout components.
-- `frontend/src/components/ui/` — Design-system primitives and Tailwind wrapper components.
-- `frontend/src/contexts/AuthContext.tsx` — Authentication context for login state.
-- `frontend/src/hooks/use-mobile.tsx` — Mobile detection hook.
-- `frontend/src/layouts/AppShell.tsx` — Primary app shell with sidebar + topbar.
-- `frontend/src/lib/` — Client-side configs, error handling, and utilities.
-- `frontend/src/services/` — Mock service interface, HTTP client, and fake data.
-- `frontend/src/types/index.ts` — Shared TypeScript model definitions.
-- `frontend/src/routes/` — Page route components.
+- **Core Library**: **React 19** (`react: ^19.2.0`) & **TypeScript** (`typescript: ^5.8.3`).
+- **Build Tool**: **Vite** (`vite: ^7.3.1`).
+- **Routing**: **React Router DOM** (`react-router-dom: ^7.1.5`) with client-side layout nesting and role guarding.
+- **Data Fetching & Caching**: **TanStack React Query v5** (`@tanstack/react-query: ^5.83.0`) and **Axios** (`axios: ^1.16.1`).
+- **UI Framework & Design**: **Tailwind CSS v4** (`tailwindcss: ^4.2.1`), **Radix UI** primitives for accessible components (Dialog, Tabs, Accordion, etc.), and **Lucide React** for icons.
+- **Toasts & Forms**: `sonner` for notifications and `react-hook-form` with `zod` validation.
+- **Data Visualization**: `recharts` (`^2.15.4`) for analytics graphs.
 
 ---
 
-## 3. Frontend Architecture
-
-### Entry Points
-- `frontend/src/start.ts` sets up a TanStack request middleware and an HTML error page fallback.
-- `frontend/src/routes/__root.tsx` defines the root route for TanStack Router with a React Query provider and `AuthProvider` context.
-- `frontend/src/main.tsx` is empty, indicating the client entrypoint is not implemented in this project snapshot.
-
-### Page Routing
-- `frontend/src/router.tsx` declares application-level routes and page metadata.
-- Pages are mounted via TanStack Router routes and include:
-  - `/login` — login page.
-  - `/dashboard` — HR dashboard.
-  - `/candidates` — candidate list page.
-  - `/candidates/:id` — candidate detail page.
-  - `/interviews` — interview management.
-  - `/notifications` — notifications center.
-  - `/reports` — analytics pages.
-  - `/settings` — settings page.
-  - `/tasks` — task board.
-  - `/activity` — activity feed.
-
-### Layout
-- `frontend/src/layouts/AppShell.tsx` renders common page scaffolding with a `Sidebar`, `Topbar`, and content area.
-- `frontend/src/components/Sidebar.tsx`, `Topbar.tsx`, `PageHeader.tsx`, `DashboardCard.tsx`, and `StatusBadge.tsx` are the main layout/UI building blocks.
-- The app shell is wrapped by `AuthProvider` and `QueryClientProvider` in `__root.tsx`.
-
-### Authentication Flow
-- `AuthContext.tsx` manages auth state and route redirection.
-- `frontend/src/services/http.ts` stores access and refresh tokens in `localStorage`, injects the access token into outgoing Axios requests, and redirects to `/login` on 401 responses.
-- `authService.login()` in `frontend/src/services/index.ts` is currently a mock implementation that validates credentials against `MOCK_USERS` and returns fake tokens.
-- There is no real API integration on the frontend yet; the backend auth routes are not wired from UI pages.
-
-### Data Layer
-- `frontend/src/services/index.ts` exposes service methods for auth, dashboard, candidates, interviews, tasks, reports, and notifications.
-- All methods currently return fake data from `frontend/src/services/mock-data.ts` and simulate asynchronous delays.
-- `frontend/src/services/http.ts` is prepared for API integration, but the service functions are not yet using it.
-
-### Types
-- `frontend/src/types/index.ts` defines domain models used across pages and services.
-- It includes models such as `User`, `Candidate`, `Interview`, `Task`, `NotificationItem`, `DashboardStats`, and audit/timeline structures.
-
-### Error Handling
-- `frontend/src/lib/error-capture.ts`, `error-page.ts`, and `lovable-error-reporting.ts` handle error reporting and rendering for the client.
-- `__root.tsx` reports uncaught route errors and displays a fallback UI.
-
----
-
-## 4. Backend Architecture
-
-### Application Startup
-- `backend/src/server.js` loads environment variables and connects to MongoDB via `config/database.js`.
-- `backend/src/app.js` builds the Express app with `helmet`, `cors`, `express.json()`, `express.urlencoded()`, and `morgan` request logging.
-- `/api/health` is a basic health check endpoint.
-- The app mounts `backend/src/routes/index.js` at `/api` and uses centralized error handling.
-
-### Database
-- MongoDB is used via Mongoose.
-- `backend/src/config/database.js` connects `mongoose` to `process.env.MONGO_URI`.
-- Persistent entities are defined with Mongoose schemas.
-
-### Shared Backend Patterns
-- Controllers handle request/response flow and call services.
-- Services contain business logic, data access, token generation, and workflow rules.
-- Middleware enforces authentication, authorization, request validation, file upload handling, and error formatting.
-- `shared/response/apiResponse.js` standardizes success responses.
-- `shared/errors/AppError.js` models API errors with statuses.
-- `shared/utils/validateRequest.js` integrates `express-validator` input validation.
-- `shared/utils/asyncHandler.js` wraps async route handlers.
-
-### Authentication & Authorization
-- `backend/src/modules/auth/auth.routes.js` exposes:
-  - `POST /api/auth/login`
-  - `POST /api/auth/refresh`
-  - `POST /api/auth/logout`
-- `auth.service.js` uses bcrypt and JWT for password validation and token generation.
-- Access tokens are signed with `JWT_ACCESS_SECRET`; refresh tokens use `JWT_REFRESH_SECRET`.
-- `auth.middleware.js` verifies access tokens and attaches `req.user`.
-- `role.middleware.js` enforces user roles for protected routes.
-- User model includes `refreshToken`, `role`, `isActive`, and `lastLogin`.
-
-### Candidate Management
-- Candidate CRUD and workflow routes are split across:
-  - `backend/src/modules/candidates/candidate.routes.js`
-  - `backend/src/modules/candidates/candidate.controller.js`
-  - `backend/src/modules/candidates/candidate.service.js`
-  - `backend/src/modules/candidates/candidate.model.js`
-  - `backend/src/modules/candidates/candidateDetails.routes.js`
-  - `backend/src/modules/candidates/candidateDetails.controller.js`
-  - `backend/src/modules/candidates/candidateDetails.service.js`
-  - `backend/src/modules/candidates/candidateWorkflow.routes.js`
-- Candidate endpoints include creation, update, deletion, detail fetch, timeline, audits, and workflow transitions.
-- Routes are protected, with `ADMIN` required for create/delete and `ADMIN|HR` for updates.
-
-### Call Management
-- `backend/src/modules/calls/call.routes.js` handles call creation and follow-up queries.
-- `backend/src/modules/calls/call.controller.js` and `call.service.js` implement call scheduling and candidate status transitions.
-- Calls are linked to candidates and status events are recorded in candidate timelines.
-
-### Interview Management
-- Interview routes are defined in `backend/src/modules/interviews/interview.routes.js`.
-- Controllers/services schedule interviews and update completion status.
-- Candidate status changes and notifications are propagated through these modules.
-
-### Task Management
-- Task endpoints in `backend/src/modules/tasks/task.routes.js` manage task creation, updates, review, and candidate status.
-- `task.service.js` supports task lifecycle and assignment.
-
-### Reports & Dashboard
-- `backend/src/modules/dashboard/dashboard.routes.js` returns HR summary metrics.
-- `backend/src/modules/reports/report.routes.js` returns summary analytics and trend data.
-- These endpoints aggregate candidate, call, interview, and task data for charts and KPI pages.
-
-### Notifications
-- `backend/src/modules/notifications/notification.routes.js` offers notification list and read/update operations.
-- Notifications are delivered for candidate assignments, interviews, offers, and overdue actions.
-
-### Settings
-- `backend/src/modules/settings/settings.routes.js` supports retrieving and updating application settings.
-- This module is likely designed for global configuration like company info or hiring thresholds.
-
-### Resumes
-- `backend/src/modules/resumes/resume.routes.js` accepts file uploads using `multer` and Cloudinary storage.
-- The route uploads resumes and returns metadata (name, URL, size, type).
-
-### Search
-- `backend/src/modules/search/search.routes.js` provides search across candidates by text.
-
-### Activity
-- `backend/src/modules/activity/activity.routes.js` returns activity feed events for dashboards.
-
-### Health Monitoring
-- `backend/src/modules/health/health.routes.js` provides API health details separate from the root `/api/health` route.
-
----
-
-## 5. Database Design (Inferred)
-
-### Core Collections
-
-#### Users
-- `name`, `email`, `passwordHash`, `role`, `isActive`, `lastLogin`, `refreshToken`
-- Roles are defined in `backend/src/constants/roles.js`.
-
-#### Candidates
-- Candidate data likely includes:
-  - `code`, `name`, `email`, `phone`, `category`, `status`, `assignedTo`, `owner`, `createdAt`, `isActive`
-  - Timeline entries and audit history are attached via separate services.
-
-#### Calls
-- Call records are associated with candidates and include scheduling/follow-up details.
-
-#### Interviews
-- Interview records include `candidateId`, `interviewerName`, `interviewType`, `scheduledAt`, `status`.
-
-#### Tasks
-- Tasks track candidate-related work with `title`, `description`, `status`, `priority`, `dueDate`, `assigneeName`, `candidateName`.
-
-#### Notifications
-- Notification items include `title`, `body`, `read`, `createdAt`, `type`.
-
-#### Settings
-- Settings support application-level configuration values.
-
-### Notes
-- The backend architecture is modeled for normalized, collection-based storage.
-- Candidate timeline and audit history appear to be separate entities created dynamically by workflow events.
-- Mongoose models and service methods imply the system is optimized for recruiter workflows, candidate transitions, and activity tracking.
-
----
-
-## 6. API Documentation
-
-### Base URL
-- Backend API base: `http://localhost:5000/api`
-- Health check: `http://localhost:5000/api/health`
-
-### Authentication
-
-#### POST /api/auth/login
-- Request body: `{ email, password }`
-- Response: `{ accessToken, refreshToken, user }`
-- Returns JWT tokens and user profile.
-
-#### POST /api/auth/refresh
-- Request body: `{ refreshToken }`
-- Response: `{ accessToken }`
-- Refreshes the access token when the refresh token is valid.
-
-#### POST /api/auth/logout
-- Protected route
-- Uses access token, clears stored refresh token.
-
-### Candidate APIs
-
-#### GET /api/candidates
-- Protected route.
-- Returns list of candidate summaries.
-
-#### GET /api/candidates/:id
-- Protected route.
-- Returns candidate detail and metadata for a single candidate.
-
-#### POST /api/candidates
-- Protected route; role `ADMIN` required.
-- Creates a new candidate.
-
-#### PATCH /api/candidates/:id
-- Protected route; roles `ADMIN|HR` allowed.
-- Updates a candidate record.
-
-#### DELETE /api/candidates/:id
-- Protected route; role `ADMIN` required.
-- Deletes or soft-deletes candidate.
-
-### Candidate Details & Workflow
-
-#### Candidate details routing
-- `backend/src/modules/candidates/candidateDetails.routes.js` is mounted at `/api/candidates` as additional routes.
-- It exposes candidate detail, timeline, and audit endpoints.
-
-#### Candidate workflow routing
-- `backend/src/modules/candidates/candidateWorkflow.routes.js` is mounted at `/api/candidates`.
-- This module handles status transitions.
-
-### Call APIs
-
-#### POST /api/calls
-- Protected; creates candidate call records and follow-up status.
-
-#### GET /api/calls/today
-- Protected; returns today’s scheduled calls.
-
-#### GET /api/calls/upcoming
-- Protected; returns upcoming follow-up calls.
-
-### Interview APIs
-
-#### GET /api/interviews
-- Protected; list interviews.
-
-#### POST /api/interviews
-- Protected; schedule interviews.
-
-### Task APIs
-
-#### GET /api/tasks
-- Protected; list tasks.
-
-#### PATCH /api/tasks/:id/status
-- Protected; update task status.
-
-### Notifications APIs
-
-#### GET /api/notifications
-- Protected; list notifications.
-
-#### PATCH /api/notifications/:id/read
-- Protected; mark a notification as read.
-
-### Report APIs
-
-#### GET /api/reports
-- Protected; returns hiring analytics and charts.
-
-### Dashboard APIs
-
-#### GET /api/dashboard
-- Protected; returns summary metrics for dashboard cards.
-
-### Search APIs
-
-#### GET /api/search?query=...
-- Protected; search candidates by text.
-
-### Resume Upload APIs
-
-#### POST /api/resumes
-- Protected; upload resume files with `multipart/form-data`.
-- Uses Cloudinary storage via `multer-storage-cloudinary`.
-
-### Settings APIs
-
-#### GET /api/settings
-- Protected; retrieve application settings.
-
-#### PUT /api/settings
-- Protected; update application settings.
-
-### Activity APIs
-
-#### GET /api/activity
-- Protected; activity feed events for timeline display.
-
-### Health APIs
-
-#### GET /api/health
-- Public health check endpoint.
-
----
-
-## 7. Backend Auth Flow
-
-1. User submits email/password to `/api/auth/login`.
-2. `auth.controller.login()` forwards the request to `auth.service.loginUser()`.
-3. `loginUser()` looks up the user by email, verifies `passwordHash` with bcrypt, and checks `isActive`.
-4. On success, it creates an access token and a refresh token, stores the refresh token in the user record, and returns both.
-5. Protected routes require the `Authorization: Bearer <accessToken>` header.
-6. `auth.middleware.js` verifies the access token and sets `req.user`.
-7. `role.middleware.js` enforces route authorization by `req.user.role`.
-8. Refresh flow uses `POST /api/auth/refresh` with a refresh token to generate a new access token.
-9. Logout clears the refresh token from the user document.
-
----
-
-## 8. Candidate Workflow
-
-The backend supports a stepwise candidate lifecycle and event recording.
-
-### Candidate statuses
-- `NEW`
-- `CONTACTED`
-- `INTERVIEW`
-- `SELECTED`
-- `DROPPED`
-- `ON_HOLD`
-
-### Workflow events
-- Candidate creation, update, and deletion are managed through candidate APIs.
-- Call scheduling and completion influence candidate status and timeline events.
-- Interview scheduling and completion are handled by the interview module.
-- Task creation + review supports candidate progress tracking.
-- Notifications are generated for assignment, interview reminders, offers, and overdue actions.
-
-### Data flow
-- Most candidate-related endpoints are protected by auth.
-- Candidate details include timeline and audit history to trace status changes.
-- Workflow modules update candidate timelines via service helpers.
-
----
-
-## 9. Frontend / Backend Mapping
-
-### Backend modules → Frontend pages
-- `auth` → `login.tsx` + `AuthContext.tsx`
-- `dashboard` → `dashboard.tsx` + `DashboardCard.tsx`
-- `candidates` → `candidates.tsx` + `candidates.$id.tsx`
-- `interviews` → `interviews.tsx`
-- `tasks` → `tasks.tsx`
-- `notifications` → `notifications.tsx`
-- `reports` → `reports.tsx`
-- `settings` → `settings.tsx`
-- `activity` → `activity.tsx`
-- `search` → not yet wired in frontend pages; search UX is not implemented.
-- `resumes` → not yet wired in frontend pages; resume upload UI is not implemented.
-
-### UI to backend gaps
-- The frontend currently uses mock service data only.
-- No real API calls or data hydration from the backend are implemented in the service layer.
-- `frontend/src/App.tsx` and `frontend/src/main.tsx` are empty, suggesting the app is incomplete or relies on a different startup pattern.
-- Authentication context and HTTP client are configured, but actual login calls are mock-only.
-
----
-
-## 10. Missing and Partially Implemented Features
-
-### Frontend gaps
-- No real backend integration for candidate, interview, task, notification, report, dashboard, or auth APIs.
-- `main.tsx` and `App.tsx` are empty.
-- `frontend/src/routes/README.md` exists but the page implementation details are not fully developed.
-- Resume upload UI is absent.
-- Search UI and search endpoint integration are absent.
-- Candidate details page appears present but may not display backend-driven timeline and audit data yet.
-
-### Backend / stability gaps
-- No seed data script for backend users/candidates beyond `frontend` mock data.
-- No explicit database migration or seeding mechanism in the backend.
-- Some modules are configured with `routes` only; the UI integration is missing.
-- The backend health endpoint is duplicated at `/api/health` and `/api/health` (root and module route), which is acceptable but should be consolidated.
-- Documentation and readme files are incomplete for deployment and developer onboarding.
-
----
-
-## 11. Deployment Guide
-
-### Prerequisites
-- Node.js 20+ (or compatible LTS)
-- MongoDB instance accessible via `MONGO_URI`
-- Cloudinary account and credentials if resume upload is used
-- `npm` or `pnpm` available
-
-### Backend setup
-1. Open terminal in `backend/`
-2. Install dependencies: `npm install`
-3. Create `.env` in `backend/` with:
-   - `PORT=5000`
-   - `MONGO_URI=<your mongodb connection string>`
-   - `JWT_ACCESS_SECRET=<secret>`
-   - `JWT_REFRESH_SECRET=<secret>`
-   - `CLOUDINARY_CLOUD_NAME=<cloud_name>`
-   - `CLOUDINARY_API_KEY=<api_key>`
-   - `CLOUDINARY_API_SECRET=<api_secret>`
-4. Start the backend in development: `npm run dev`
-
-### Frontend setup
-1. Open terminal in `frontend/`
-2. Install dependencies: `npm install`
-3. Create `.env` or set Vite env variable if needed: `VITE_API_URL=http://localhost:5000/api`
-4. Start the frontend: `npm run dev`
-
-### Production build
-- Backend: `npm start` in `backend/`
-- Frontend: `npm run build` in `frontend/`
-- Serve the build output via a static hosting provider or integrate with a Node server.
-
-### Notes
-- The frontend currently relies on mock services, so the UI will work without a live backend.
-- When wiring production API integration, update `frontend/src/services/index.ts` to call `frontend/src/services/http.ts` instead of returning mock data.
-
----
-
-## 12. Onboarding Guide
-
-### Recommended first steps
-1. Review `backend/src/app.js`, `backend/src/server.js`, and `backend/src/routes/index.js` to understand the backend request flow.
-2. Review `frontend/src/routes/__root.tsx`, `frontend/src/router.tsx`, and `frontend/src/layouts/AppShell.tsx` for the frontend app structure.
-3. Open `frontend/src/services/index.ts` and `frontend/src/services/mock-data.ts` to understand how mock data is provided.
-4. Inspect `backend/src/modules/auth` and `backend/src/middleware` to understand authentication and RBAC.
-5. Run both apps locally with `npm run dev` in each folder and verify the frontend loads.
-
-### Core responsibilities
-- Backend developers: build and extend API modules, add seed data, secure auth flows, and wire Cloudinary/resume storage.
-- Frontend developers: implement actual API calls, complete page interactions, connect candidate detail workflows, and add missing UX such as search and upload.
-- QA: verify page routes, auth redirect behavior, and mock vs real data transitions after integration.
-
----
-
-## 13. Completion Roadmap
-
-### Phase 1: Stabilize backend
-- Add database seeding for users and candidates.
-- Add API documentation or OpenAPI spec.
-- Improve error handling and validation schema coverage.
-- Consolidate health endpoints.
-
-### Phase 2: Frontend integration
-- Implement live API service layer in `frontend/src/services/index.ts`.
-- Replace mock data with backend responses.
-- Wire login to `POST /api/auth/login` and persist tokens.
-- Implement candidate search page and resume upload UI.
-- Add refresh token flow and route guarding.
-
-### Phase 3: UX completion
-- Build candidate details timeline and audit history views.
-- Add task assignment, interview scheduling, and call follow-up forms.
-- Add settings management and report filters.
-- Improve mobile/responsive layout.
-
-### Phase 4: Production readiness
-- Add CI lint/build checks.
-- Add tests for backend routes and frontend pages.
-- Harden security for token storage, CORS, and Cloudinary uploads.
-- Document environment and runbooks.
-
----
-
-## 14. Architecture Summary
-
-This platform uses a classic decoupled architecture:
-
-- Backend: REST API + MongoDB with domain modules handling auth, candidate lifecycle, hiring workflows, notifications, and analytics.
-- Frontend: React SPA using TanStack Router and React Query, built with Tailwind and Radix UI.
-
-The backend supports a recruiter workflow from candidate intake through interviews, task assignment, reporting, and notifications.
-
-The frontend is currently scaffolded with strong route and UI structure, but it remains disconnected from the real backend because service methods still return mock data.
-
-### Key strengths
-- Modular backend design for extensibility.
-- Clean frontend route layout and design-system primitives.
-- Authentication and role-based access control prepared in the backend.
-
-### Primary gap
-- The application is not fully integrated: the frontend works in mock mode while the backend is ready for API-driven workflows.
-
----
-
-## 15. Important Files Reference
-
-- `backend/src/app.js`
-- `backend/src/server.js`
-- `backend/src/routes/index.js`
-- `backend/src/modules/auth/auth.service.js`
-- `backend/src/modules/auth/auth.middleware.js`
-- `backend/src/modules/candidates/candidate.controller.js`
-- `backend/src/modules/candidates/candidate.service.js`
-- `backend/src/modules/resumes/resume.routes.js`
-- `frontend/src/routes/__root.tsx`
-- `frontend/src/router.tsx`
-- `frontend/src/layouts/AppShell.tsx`
-- `frontend/src/services/index.ts`
-- `frontend/src/services/http.ts`
-- `frontend/src/services/mock-data.ts`
-- `frontend/src/types/index.ts`
-
----
-
-## 16. Notes and Recommendations
-
-- If you want the UI to talk to the backend, the next priority is to implement the backend API calls in `frontend/src/services/index.ts`.
-- Add a backend seed script to create an initial admin user and sample candidate records.
-- Confirm the actual entrypoint pattern for the frontend: `main.tsx` is empty, which likely means the app is not wired through a standard React client entry.
-- Validate the Cloudinary resume upload flow with proper `CLOUDINARY_*` env variables and update the resume UI accordingly.
-- Create a developer README with commands for running the backend and frontend together.
-
----
-
-## 17. Quick Start Commands
-
-Backend:
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-Frontend:
-```bash
-cd frontend
-npm install
-npm run dev
+## 3. Project Directory Structure
+
+Below is the complete text-based tree of the repository, updated to reflect the full structure of the frontend React pages, components, and backend modules.
+
+```text
+hr-recruitment-platform
+├── PROJECT_DOCUMENTATION.md         # This file
+├── PRODUCTION_READINESS_FIXES.md    # Log of recent resume upload fixes
+├── README.md                        # Quick start overview
+├── generate_tree.js                 # Script to generate project structure
+├── project_summary.txt              # Auto-generated project summary
+│
+├── backend
+│   ├── package.json                 # Backend scripts and dependencies
+│   ├── src
+│   │   ├── app.js                   # Express application setup
+│   │   ├── server.js                # Server entrypoint and database connection
+│   │   ├── config
+│   │   │   └── database.js          # MongoDB Mongoose connection helper
+│   │   ├── constants                # Centralized business logic enums
+│   │   │   ├── callOutcomes.js
+│   │   │   ├── candidateStatus.js
+│   │   │   ├── dropReasons.js
+│   │   │   ├── interestStatus.js
+│   │   │   ├── roles.js
+│   │   │   ├── timelineEvents.js
+│   │   │   └── userRoles.js
+│   │   ├── jobs                     # Scheduled background jobs (e.g. cron tasks)
+│   │   ├── middleware               # Global route middlewares
+│   │   │   ├── auth.middleware.js   # JWT verification middleware
+│   │   │   ├── error.middleware.js  # Global error boundary
+│   │   │   ├── role.middleware.js   # Role-based route protector
+│   │   │   └── upload.middleware.js # Multer file upload configurations
+│   │   ├── routes
+│   │   │   └── index.js             # Core API router (binds all modules)
+│   │   ├── scripts
+│   │   │   └── createAdmin.js       # Database seeder for default users
+│   │   ├── shared                   # Core utilities and standardized helpers
+│   │   │   ├── errors
+│   │   │   │   └── AppError.js      # Standardized custom error class
+│   │   │   ├── logger
+│   │   │   ├── response
+│   │   │   │   └── apiResponse.js   # Standard success response formatter
+│   │   │   ├── services
+│   │   │   │   ├── audit.service.js # Logs audit changes to candidateAudit
+│   │   │   │   ├── candidateCode.service.js # Generates candidate unique IDs
+│   │   │   │   └── timeline.service.js      # Logs timeline events
+│   │   │   └── utils
+│   │   │       ├── asyncHandler.js  # Wraps async controllers to catch errors
+│   │   │       ├── generateToken.js # Generates JWT access/refresh tokens
+│   │   │       ├── pagination.js    # Utility for paginated DB queries
+│   │   │       └── validateRequest.js # Validates express-validator schemas
+│   │   └── modules                  # Domain-driven features
+│   │       ├── activity
+│   │       │   ├── activity.controller.js
+│   │       │   ├── activity.routes.js
+│   │       │   └── activity.service.js
+│   │       ├── ai                   # AI integration controllers and services
+│   │       │   ├── candidateExtractor.service.js # Calls Gemini API
+│   │       │   ├── profileUpdater.service.js      # Builds CandidateProfile
+│   │       │   └── resumeParser.service.js        # Extracts PDF text
+│   │       ├── audits
+│   │       │   └── candidateAudit.model.js        # CandidateAudit Mongoose schema
+│   │       ├── auth
+│   │       │   ├── auth.controller.js
+│   │       │   ├── auth.model.js    # User Mongoose schema
+│   │       │   ├── auth.routes.js
+│   │       │   ├── auth.service.js
+│   │       │   └── auth.validation.js
+│   │       ├── calls
+│   │       │   ├── call.controller.js
+│   │       │   ├── call.model.js    # Call record schema
+│   │       │   ├── call.routes.js
+│   │       │   ├── call.service.js
+│   │       │   └── call.validation.js
+│   │       ├── candidates
+│   │       │   ├── candidate.controller.js
+│   │       │   ├── candidate.model.js # Candidate Mongoose schema
+│   │       │   ├── candidate.routes.js
+│   │       │   ├── candidate.service.js
+│   │       │   ├── candidate.validation.js
+│   │       │   ├── candidateDetails.controller.js # Full candidate overview
+│   │       │   ├── candidateDetails.routes.js
+│   │       │   ├── candidateDetails.service.js
+│   │       │   ├── candidateStatus.service.js
+│   │       │   ├── candidateWorkflow.controller.js
+│   │       │   ├── candidateWorkflow.routes.js
+│   │       │   └── candidateWorkflow.service.js
+│   │       ├── dashboard
+│   │       │   ├── dashboard.controller.js
+│   │       │   ├── dashboard.routes.js
+│   │       │   └── dashboard.service.js
+│   │       ├── health
+│   │       │   ├── health.controller.js
+│   │       │   └── health.routes.js
+│   │       ├── interviews
+│   │       │   ├── interview.controller.js
+│   │       │   ├── interview.model.js # Interview Mongoose schema
+│   │       │   ├── interview.routes.js
+│   │       │   ├── interview.service.js
+│   │       │   └── interview.validation.js
+│   │       ├── notifications
+│   │       │   ├── notification.controller.js
+│   │       │   ├── notification.model.js # Notification Mongoose schema
+│   │       │   ├── notification.routes.js
+│   │       │   └── notification.service.js
+│   │       ├── profiles
+│   │       │   └── candidateProfile.model.js # Detailed Candidate Profile schema
+│   │       ├── reports
+│   │       │   ├── report.controller.js
+│   │       │   ├── report.routes.js
+│   │       │   └── report.service.js
+│   │       ├── resumes
+│   │       │   ├── resume.controller.js
+│   │       │   ├── resume.model.js
+│   │       │   ├── resume.routes.js
+│   │       │   └── resume.service.js
+│   │       ├── search
+│   │       │   ├── search.controller.js
+│   │       │   ├── search.routes.js
+│   │       │   └── search.service.js
+│   │       ├── settings
+│   │       │   ├── settings.controller.js
+│   │       │   ├── settings.model.js # App Settings schema
+│   │       │   ├── settings.routes.js
+│   │       │   └── settings.service.js
+│   │       ├── tasks
+│   │       │   ├── task.controller.js
+│   │       │   ├── task.model.js    # Task Mongoose schema
+│   │       │   ├── task.routes.js
+│   │       │   ├── task.service.js
+│   │       │   └── task.validation.js
+│   │       ├── timelines
+│   │       │   └── candidateTimeline.model.js # CandidateTimeline schema
+│   │       ├── uploads              # Local storage fallback directory
+│   │       └── users
+│   │           ├── user.controller.js
+│   │           ├── user.routes.js
+│   │           ├── user.service.js
+│   │           └── user.validation.js
+│   
+└── frontend
+    ├── package.json                 # Frontend dependencies and scripts
+    ├── index.html                   # HTML template entrypoint
+    ├── vite.config.ts               # Vite configurations
+    ├── src
+        ├── main.tsx                 # React DOM mount point
+        ├── App.tsx                  # Main router setup and providers
+        ├── index.css                # Global and component stylesheets
+        ├── types
+        │   └── index.ts             # TypeScript entity interfaces
+        ├── lib
+        │   ├── config.server.ts
+        │   ├── error-capture.ts
+        │   ├── error-page.ts
+        │   ├── lovable-error-reporting.ts
+        │   └── utils.ts             # Tailwind class merging utility
+        ├── contexts
+        │   └── AuthContext.tsx      # Auth State & Token persistence provider
+        ├── hooks
+        │   ├── use-mobile.tsx       # Detects mobile layouts
+        │   └── useResumeUpload.ts   # Custom hook managing file upload state
+        ├── layouts
+        │   └── AppShell.tsx         # Sidebar, Topbar, & content wrapper layout
+        ├── components
+        │   ├── DashboardCard.tsx    # Summary widgets
+        │   ├── Emptystate.tsx       # Null results placeholder
+        │   ├── PageHeader.tsx       # Title bar with action buttons
+        │   ├── Sidebar.tsx          # Navigation panel
+        │   ├── StatusBadge.tsx      # Formats candidate pipeline status
+        │   ├── Topbar.tsx           # Profile info and logout toggle
+        │   ├── candidates
+        │   │   ├── ResumeUploadDialog.tsx   # PDF dropzone dialog
+        │   │   └── ResumeUploadProgress.tsx # Upload tracker list
+        │   └── ui                   # Radix UI primitives & utility wrappers
+        ├── services
+        │   ├── http.ts              # Axios custom client with JWT interceptor
+        │   ├── index.ts             # Main API service mapping (mock + http calls)
+        │   ├── mock-data.ts         # Fake data database for offline mode
+        │   └── resumeUploadService.ts # API calls for uploading resumes
+        └── pages
+            ├── Activity.tsx         # Audit logs feed
+            ├── CandidateDetail.tsx  # Tabbed detail view (profile, logs, etc.)
+            ├── Candidates.tsx       # Searchable candidate pipeline table
+            ├── Dashboard.tsx        # High-level pipeline KPI dashboard
+            ├── Interviews.tsx       # Interview schedule calendar list
+            ├── Login.tsx            # Login credentials screen
+            ├── Notifications.tsx    # Alerts feed
+            ├── Reports.tsx          # Analytical graphs
+            ├── Settings.tsx         # Application preferences (Account, Company)
+            └── Tasks.tsx            # Recruiter Kanban board
 ```
 
 ---
 
-## 18. Additional Observations
+## 4. How Everything is Connected
 
-- The frontend appears to be built using the newer TanStack React Start / Router pattern rather than traditional ReactDOM render logic.
-- `frontend/src/start.ts` includes request middleware for server-side behavior, which suggests the app may target a hybrid or is preconfigured for server rendering.
-- The UI uses a mock-first approach, making it easy to demo the product without backend availability.
-- `backend/package.json` uses `type: module`, so all backend source files are ES modules.
+### 4.1 Authentication Flow
+1. **Login**: User posts credentials (email & password) to `/api/auth/login`. 
+2. **Tokens**: The backend validates with bcrypt and returns an `accessToken` (short-lived) and a `refreshToken` (saved in MongoDB on the `User` document).
+3. **Frontend Storage**: On success, `AuthContext.tsx` stores both tokens in `localStorage` and transitions `isAuthenticated` to `true`.
+4. **API Requests**: The custom Axios client in `frontend/src/services/http.ts` registers an interceptor. This interceptor injects the `Authorization: Bearer <accessToken>` header into all outgoing requests.
+5. **Unauthorized Actions**: If an API returns a `401 Unauthorized` response (due to an expired access token), the interceptor automatically calls `/api/auth/refresh` to fetch a new access token. If that fails, it clears local storage and redirects the user to `/login`.
+6. **Route Guarding**: The React Router in `frontend/src/App.tsx` wraps protected pages inside the `<RequireRole />` component, which checks login state and verifies role values (`ADMIN` vs. `HR`).
+
+### 4.2 Candidate Intake & AI Resume Extraction Flow
+```mermaid
+graph TD
+    A[Recruiter Uploads PDF Resumes] --> B[Axios Multipart Form Data Post]
+    B --> C[Multer Memory Storage]
+    C --> D[resumeParser.service parses PDF to Text]
+    D --> E[candidateExtractor.service extracts JSON details using Gemini API]
+    E --> F[Create Candidate Mongoose Document]
+    F --> G[Create CandidateProfile Mongoose Document]
+    F --> H[Log CandidateTimeline Event]
+    F --> I[Create HR Notification]
+    F --> J[Return JSON candidate arrays to Frontend]
+```
+1. **Upload**: The user uploads multiple PDF resume files through `ResumeUploadDialog.tsx`.
+2. **API Call**: The files are packed into `FormData` and posted to `/api/candidates/upload-resumes`.
+3. **Text Extraction**: The backend intercepts files using `multer`. The `resumeParser.service.js` parses the buffer into raw text using the `pdf-parse` engine.
+4. **Gemini Extraction**: The raw text (truncated to 15,000 characters) is sent to `openaiResumeAnalyzer.service.js` (which is configured to use the **Google Gemini API**). Gemini processes the text and extracts a structured JSON response matching the candidate fields (skills, experience, education, score).
+5. **Database Insertion**:
+   - A `Candidate` document is created with standardized fields (`code`, `name`, `email`, `phone`, `category`, `status`, `aiAnalysis`).
+   - A `CandidateProfile` document is created linking the candidate ID to detailed arrays of work history, certifications, projects, and parsed skills.
+   - An event is logged to `CandidateTimeline` (`TIMELINE_EVENTS.RESUME_UPLOADED`).
+   - A system `Notification` is created notifying the assigned HR.
+6. **Response**: The frontend receives a list of successfully imported candidates and displays them in the pipeline.
+
+### 4.3 Candidate Lifecycle & Auditing
+- **Candidate Details page**: Querying a candidate's full profile calls `/api/candidates/:id`. The backend service `candidateDetails.service.js` uses `Promise.all` to concurrently query the `Candidate`, `CandidateProfile`, `Call`, `Interview`, `Task`, `CandidateTimeline`, and `CandidateAudit` models.
+- **Workflow Transitions**: Changing a candidate's status (e.g. scheduling an interview or dropping a candidate) fires a transition service (`candidateWorkflow.service.js` or `candidateStatus.service.js`). These services update the candidate's `status` field, log the change to the `CandidateTimeline` model, and record the exact database field change (`fieldName`, `oldValue`, `newValue`, `changedBy`) in the `CandidateAudit` collection.
 
 ---
 
-## 19. Suggested Next Work Items
+## 5. Issues & Incomplete Features (Gaps)
 
-1. Implement actual backend API integration on the frontend.
-2. Add backend database seeding and sample data scripts.
-3. Build search and resume upload pages.
-4. Add role-based UI behavior for admin vs HR users.
-5. Create API docs or Postman collection for backend endpoints.
+While the project builds successfully and the resume upload pipeline is production-ready, several significant structural and wiring gaps exist between the frontend and the backend.
+
+### 5.1 Schema Field Naming Discrepancies
+There are severe field mismatches between the database schemas and the TypeScript interfaces expected by the frontend pages. Because the backend returns raw Mongoose query documents, these fields do not align:
+
+| Entity | DB Mongoose Field Name | Frontend TypeScript Expected Field | Impact on UI |
+| :--- | :--- | :--- | :--- |
+| **Audit Logs** | `fieldName` | `field` | Audit log field name column is empty |
+| **Audit Logs** | `changedBy` (User ObjectId) | `updatedBy` (String) | Recruiter name column is empty |
+| **Audit Logs** | `changedAt` | `timestamp` | Time column is empty / "—" |
+| **Timeline** | `eventType` | `type` | Event category icon/color fails to render |
+| **Timeline** | `performedBy` (User ObjectId) | `by` (String) | Actions default to "System" rather than the actual HR name |
+| **Timeline** | `createdAt` (Mongoose standard) | `at` | Dates show up as "Invalid Date" or "—" |
+
+> [!WARNING]
+> **Resolution Required**: The frontend `candidateService.get(id)` function in `frontend/src/services/index.ts` does not map the returned backend arrays. A mapper function must be added to translate the database responses into frontend types.
+
+### 5.2 Missing Backend Listing Endpoints
+Several frontend pages require dashboard-wide lists, but the backend lacks query endpoints:
+1. **Interviews Page**: The frontend calls `interviewService.list()` to fetch scheduled interviews. However, the backend router only defines `POST /api/interviews` and `PATCH /api/interviews/:id/complete`. There is **no endpoint to get all interviews** from the database.
+2. **Tasks Page (Kanban)**: The frontend calls `taskService.list()` to construct the task lanes. The backend only defines creation, submission, and review endpoints. There is **no GET route to retrieve all tasks**.
+
+### 5.3 Offline Service Mocking
+Only the **Authentication** and **Candidate CRUD / Resume Upload** modules are connected to the live Express API. The remaining service functions in `frontend/src/services/index.ts` are completely mocked:
+- `dashboardService.get()`: Returns static counters from `mock-data.ts`.
+- `interviewService.list()` & `interviewService.create()`: Returns local array cache.
+- `taskService.list()` & `taskService.updateStatus()`: Returns local array cache.
+- `reportService.get()`: Generates random mathematical conversions for analytics charts.
+- `notificationService.list()`, `markRead()`, & `markAllRead()`: Modifies local variables.
+
+### 5.4 Analytical & Report Mismatches
+- **Backend Analytics**: The backend `/api/reports` endpoints compute minimal information: total candidates, status counts, and the total count of candidates assigned to each HR.
+- **Frontend Expectation**: The Reports page expects a single payload representing monthly trends (applied, interviewed, hired), source distribution (LinkedIn, Referrals, Naukri), and recruiter KPIs (counts of calls, interviews, and offers). The backend currently has no models or database collections tracking recruitment sources or recruiters' call/interview logs collectively.
+
+### 5.5 Static Settings UI
+- The settings panel on the frontend is entirely static. Forms under the "Company", "Resume", "Notifications", and "Preferences" tabs have hardcoded input values. Clicking "Save changes" triggers a static Success toast but does not make any PUT/PATCH request to the backend `/api/settings` endpoints.
 
 ---
 
-## 20. Contact Points in Code
+## 6. Onboarding & Quick Start Guide
 
-- Search term `TODO` or `mock` in `frontend/src/services/index.ts` and `frontend/src/services/mock-data.ts` for the main integration gap.
-- `backend/src/constants/roles.js` defines role values used across authorization logic.
-- `backend/src/shared/utils/generateToken.js` controls JWT behavior.
-- `backend/src/modules/auth` and `frontend/src/contexts/AuthContext.tsx` are the key auth touchpoints.
+### 6.1 Prerequisites
+- **Node.js**: v20 or higher.
+- **MongoDB**: A running instance (local or Atlas cluster).
+- **Gemini API Key**: Available from Google AI Studio.
+
+### 6.2 Setup Commands
+
+1. **Clone & Install Dependencies**:
+   ```bash
+   # Install Backend dependencies
+   cd backend
+   npm install
+   
+   # Install Frontend dependencies
+   cd ../frontend
+   npm install
+   ```
+
+2. **Configure Environment Variables**:
+   Create a `.env` file inside the `backend/` folder:
+   ```env
+   PORT=5000
+   MONGODB_URI=mongodb://localhost:27017/recruitment-platform
+   JWT_ACCESS_SECRET=your_super_secret_access_key
+   JWT_REFRESH_SECRET=your_super_secret_refresh_key
+   GEMINI_API_KEY=AIzaSy...your_gemini_key
+   
+   # Optional: Cloudinary config for resume backups
+   CLOUDINARY_CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_api_key
+   CLOUDINARY_API_SECRET=your_api_secret
+   ```
+
+3. **Database Seeding**:
+   The backend automatically seeds default users on startup if `NODE_ENV` is not set to `production`. You can also manually seed the database:
+   ```bash
+   cd backend
+   npm run seed:users
+   ```
+
+4. **Launch Local Servers**:
+   ```bash
+   # Terminal 1: Launch Backend API
+   cd backend
+   npm run dev
+   # Runs on http://localhost:5000
+   
+   # Terminal 2: Launch Frontend App
+   cd frontend
+   npm run dev
+   # Runs on http://localhost:5173
+   ```
+
+### 6.3 Default Seed Credentials
+The database seeder prepares two roles for validation:
+
+| Role | Username / Email | Password |
+| :--- | :--- | :--- |
+| **System Admin** | `admin@company.com` | `Admin@123` |
+| **HR Recruiter** | `hr@company.com` | `Hr@123` |

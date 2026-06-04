@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Download, FileUp, Filter, Plus, Search, Trash2, UserCog } from "lucide-react";
@@ -22,10 +22,7 @@ import { ResumeUploadDialog } from "@/components/candidates/ResumeUploadDialog";
 
 
 
-export const Route = createFileRoute("/candidates")({
-  head: () => ({ meta: [{ title: "Candidates — Talentflow" }] }),
-  component: () => <AppShell><CandidatesPage /></AppShell>,
-});
+
 
 const createSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -37,7 +34,7 @@ type CreateForm = z.infer<typeof createSchema>;
 
 const STATUS_FILTERS: ("ALL" | CandidateStatus)[] = ["ALL", "NEW", "CONTACTED", "INTERVIEW", "SELECTED", "DROPPED", "ON_HOLD"];
 
-function CandidatesPage() {
+export default function CandidatesPage() {
   const qc = useQueryClient();
   const { data: candidates = [], isLoading } = useQuery({ queryKey: ["candidates"], queryFn: () => candidateService.list() });
 
@@ -268,7 +265,7 @@ function CandidateRow({ c, onDelete }: { c: Candidate; onDelete: () => void }) {
     <tr className="border-b border-border last:border-0 transition hover:bg-muted/30">
       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.code ?? "N/A"}</td>
       <td className="px-4 py-3">
-        <Link to={"/candidates/$id" as any} params={{ id: c.id } as any} className="flex items-center gap-2.5">
+        <Link to={`/candidates/${c.id}`} className="flex items-center gap-2.5">
           <span className="grid size-8 place-items-center rounded-full gradient-primary text-xs font-semibold text-primary-foreground">
             {(c.name ?? "Unknown Candidate").split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("") || "UC"}
           </span>
@@ -284,10 +281,7 @@ function CandidateRow({ c, onDelete }: { c: Candidate; onDelete: () => void }) {
       <td className="px-4 py-3 text-xs text-muted-foreground">{c.createdAt ? format(new Date(c.createdAt), "MMM d, yyyy") : "—"}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
-          <Link
-            to={"/candidates/$id" as any}
-            params={{ id: c.id } as any}
-            className="grid size-8 place-items-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-primary"
+          <Link to={`/candidates/${c.id}`} className="grid size-8 place-items-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-primary"
             title="Manage"
           ><UserCog className="size-4" /></Link>
           <button

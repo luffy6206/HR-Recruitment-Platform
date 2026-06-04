@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/layouts/AppShell";
 import { PageHeader } from "@/components/PageHeader";
@@ -7,10 +7,7 @@ import type { Task, TaskStatus } from "@/types";
 import { format, isPast } from "date-fns";
 import { CheckCircle2, Clock, Loader2 } from "lucide-react";
 
-export const Route = createFileRoute("/tasks")({
-  head: () => ({ meta: [{ title: "Tasks — Talentflow" }] }),
-  component: () => <AppShell><TasksPage /></AppShell>,
-});
+
 
 const COLUMNS: { id: TaskStatus; label: string; tone: string }[] = [
   { id: "TODO", label: "To do", tone: "bg-info/10 text-info" },
@@ -26,7 +23,7 @@ const PRIO_TONE: Record<Task["priority"], string> = {
   URGENT: "bg-destructive/10 text-destructive",
 };
 
-function TasksPage() {
+export default function TasksPage() {
   const qc = useQueryClient();
   const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: () => taskService.list() });
 

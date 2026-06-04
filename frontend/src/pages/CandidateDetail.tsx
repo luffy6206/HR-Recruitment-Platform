@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Award, Briefcase, CalendarCheck, ClipboardList, GraduationCap, History, Mail, Phone, Sparkles } from "lucide-react";
 import { AppShell } from "@/layouts/AppShell";
@@ -7,16 +7,14 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, formatDistanceToNow } from "date-fns";
 
-export const Route = createFileRoute("/candidates/$id")({
-  head: () => ({ meta: [{ title: "Candidate — Talentflow" }] }),
-  component: () => <AppShell><CandidateDetailsPage /></AppShell>,
-});
 
-function CandidateDetailsPage() {
-  const { id } = useParams({ from: "/candidates/$id" });
+
+export default function CandidateDetailsPage() {
+  const { id } = useParams();
   const { data, isLoading, error } = useQuery({
     queryKey: ["candidate", id],
-    queryFn: () => candidateService.get(id),
+    queryFn: () => candidateService.get(id!),
+    enabled: !!id,
   });
   const { data: allInterviews = [] } = useQuery({ queryKey: ["interviews"], queryFn: () => interviewService.list() });
   const { data: allTasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: () => taskService.list() });
