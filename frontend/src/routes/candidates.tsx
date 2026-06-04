@@ -54,10 +54,17 @@ function CandidatesPage() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["candidates"] });
       if (data.imported > 0) {
+        let message = `${data.imported} candidate${data.imported === 1 ? "" : "s"} imported successfully`;
+        if (data.duplicates > 0) {
+          message += `, ${data.duplicates} duplicate resume${data.duplicates === 1 ? "" : "s"} skipped`;
+        }
+        if (data.failed > 0) {
+          message += `, ${data.failed} resume${data.failed === 1 ? "" : "s"} failed`;
+        }
+        toast.success(message);
+      } else if (data.duplicates > 0) {
         toast.success(
-          `${data.imported} candidate${data.imported === 1 ? "" : "s"} imported successfully${
-            data.failed > 0 ? `, ${data.failed} failed` : ""
-          }`
+          `${data.duplicates} duplicate resume${data.duplicates === 1 ? "" : "s"} skipped`
         );
       } else if (data.failed > 0) {
         toast.error(
