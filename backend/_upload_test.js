@@ -13,9 +13,9 @@ console.log(JSON.stringify(loginData, null, 2));
 const token = loginData?.data?.accessToken;
 if (!token) throw new Error("No access token");
 const formData = new FormData();
-const filePath = path.join(process.cwd(), "sample_resume.pdf");
+const filePath = path.join(process.cwd(), "sample_fresh_resume.pdf");
 const buffer = fs.readFileSync(filePath);
-formData.append("resumes", new Blob([buffer]), "sample_resume.pdf");
+formData.append("resumes", new Blob([buffer]), "sample_fresh_resume.pdf");
 const uploadRes = await fetch(`${baseUrl}/api/candidates/upload-resumes`, {
   method: "POST",
   headers: { Authorization: `Bearer ${token}` },

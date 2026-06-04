@@ -13,6 +13,25 @@ import { getPagination } from "../../shared/utils/pagination.js";
 
 import AppError from "../../shared/errors/AppError.js";
 
+export const findDuplicateCandidate = async ({ email, phone }) => {
+  const conditions = [];
+  if (email) {
+    conditions.push({ email });
+  }
+  if (phone) {
+    conditions.push({ phone });
+  }
+
+  if (conditions.length === 0) {
+    return null;
+  }
+
+  return Candidate.findOne({
+    $or: conditions,
+    isDeleted: false,
+  });
+};
+
 export const createCandidate = async (
   payload,
   userId
@@ -41,13 +60,13 @@ export const createCandidate = async (
 
   // Allow bypassing duplicate checks for test runs by setting SKIP_DUPLICATE_CHECK=true
   if (duplicateConditions.length && process.env.SKIP_DUPLICATE_CHECK !== 'true') {
-    const existingCandidate =
-      await Candidate.findOne({
-        $or: duplicateConditions,
-        isDeleted: false,
-      });
+    const existingCandidate = await findDuplicateCandidate({
+      email: email || undefined,
+      phone: phone || undefined,
+    });
 
     if (existingCandidate) {
+      console.log("[DUPLICATE BLOCKED]", existingCandidate._id.toString());
       throw new AppError(
         "Candidate already exists",
         409

@@ -46,6 +46,7 @@ export interface ResumeUploadError {
 export interface ResumeUploadResponse {
   success: boolean;
   imported: number;
+  duplicates: number;
   failed: number;
   candidates: ResumeUploadCandidate[];
   message?: string;
