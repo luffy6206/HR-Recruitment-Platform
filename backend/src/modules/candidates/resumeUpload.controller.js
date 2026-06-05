@@ -3,11 +3,11 @@ import { successResponse, errorResponse } from "../../shared/response/apiRespons
 import AppError from "../../shared/errors/AppError.js";
 import { resumeParserService } from "../../services/resumeParser.service.js";
 import { openaiResumeAnalyzerService } from "../../services/openaiResumeAnalyzer.service.js";
-import { createCandidate } from "./candidate.service.js";
+import { createCandidate, findDuplicateCandidate } from "./candidate.service.js";
 import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
-
+import { updateProfileFromResume } from "../ai/profileUpdater.service.js";
 /**
  * Upload and process multiple resume files
  * Extracts text, analyzes with Gemini, creates candidates

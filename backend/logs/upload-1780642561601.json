@@ -1,0 +1,112 @@
+{
+  "timestamp": "2026-06-05T06:56:00.171Z",
+  "files": [
+    {
+      "fileName": "ResumeMITHLESHMEWADA.pdf",
+      "mimeType": "application/pdf",
+      "size": 172492,
+      "extracted": {
+        "length": 1720,
+        "preview": "MITHLESH MEWADA\n+91 9575676904 || mewadamithlesh@gmail.com || LinkedIn\nCareer Objective:- To obtain a Software Developer position where I can apply my skills in ASP.NET, C#, Entity\nFramework, and SQL Server to build scalable and high-performing web applications while continuously improving my techni"
+      },
+      "resolved": {
+        "name": "Mithlesh Mewada",
+        "email": "mewadamithlesh@gmail.com",
+        "phone": "+91 9575676904"
+      },
+      "savedPath": "/uploads/resumes/1780642560835-ResumeMITHLESHMEWADA.pdf",
+      "insert": {
+        "id": "6a22730145da3b5cce88530a",
+        "code": "CAN-2026-0037"
+      },
+      "result": {
+        "id": "6a22730145da3b5cce88530a",
+        "name": "Mithlesh Mewada",
+        "email": "mewadamithlesh@gmail.com",
+        "code": "CAN-2026-0037"
+      }
+    }
+  ],
+  "stages": [
+    {
+      "stage": "pdf_extraction",
+      "file": "ResumeMITHLESHMEWADA.pdf",
+      "length": 1720
+    },
+    {
+      "stage": "ai_analysis",
+      "file": "ResumeMITHLESHMEWADA.pdf",
+      "model": null,
+      "promptPreview": null,
+      "raw": null
+    },
+    {
+      "stage": "candidate_mapping",
+      "file": "ResumeMITHLESHMEWADA.pdf",
+      "payload": {
+        "name": "Mithlesh Mewada",
+        "email": "mewadamithlesh@gmail.com",
+        "phone": "+91 9575676904",
+        "category": "Imported from Resume",
+        "status": "NEW",
+        "source": "RESUME",
+        "resumeFilePath": "/uploads/resumes/1780642560835-ResumeMITHLESHMEWADA.pdf",
+        "aiAnalysis": {
+          "skills": [
+            "Java",
+            "C",
+            "C#",
+            "Go",
+            "Scala",
+            "R",
+            "Bootstrap",
+            "ASP.NET",
+            "REST API",
+            "MySQL",
+            "SQL Server",
+            "RAG",
+            "OOP",
+            "Git",
+            "GitHub",
+            "Problem Solving"
+          ],
+          "experienceYears": 0,
+          "education": "[{\"degree\":\"BA\",\"specialization\":\"chelor’s of Technology Expected June\",\"college\":\"Vishwakarma Institute of Technology\",\"year\":\"2026\",\"cgpa\":\"7.5\"},{\"degree\":\"BA\",\"specialization\":null,\"college\":\"sal Institute of Science & Technology Bhopal, MP\",\"year\":\"2022\",\"cgpa\":null}]",
+          "currentCompany": "",
+          "designation": "",
+          "location": "Technology Bhopal, MP",
+          "summary": "Candidate resume parsed via primary parser. 16 skills detected, 0 experience entries, 2 education entries, 2 projects, 4 certifications.",
+          "resumeScore": 71,
+          "confidenceScores": {
+            "name": 95,
+            "email": 95,
+            "phone": 95,
+            "linkedin": 0,
+            "github": 0,
+            "location": 80,
+            "skills": 80,
+            "education": 80,
+            "experience": 0,
+            "projects": 80,
+            "certifications": 80,
+            "experienceYears": 0,
+            "inferredSkills": 0
+          },
+          "analyzedAt": "2026-06-05T06:56:00.838Z"
+        },
+        "emailHash": "1c046fe88a3e6f9ab82c22c0b2e5981b"
+      }
+    },
+    {
+      "stage": "candidate_insert",
+      "file": "ResumeMITHLESHMEWADA.pdf",
+      "id": "6a22730145da3b5cce88530a",
+      "code": "CAN-2026-0037"
+    },
+    {
+      "stage": "profile_update",
+      "file": "ResumeMITHLESHMEWADA.pdf",
+      "id": "6a22730145da3b5cce88530a"
+    }
+  ]
+}
