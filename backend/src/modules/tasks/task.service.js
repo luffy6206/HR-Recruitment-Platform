@@ -60,6 +60,8 @@ export const createTask =
       await Task.create({
         ...payload,
         assignedBy: userId,
+        projectDemoStatus: payload.projectDemoStatus ?? "PENDING",
+        completed: false,
       });
 
     await changeCandidateStatus(
@@ -126,6 +128,8 @@ export const submitTask =
     task.submissionLink =
       submissionLink;
 
+    task.submittedAt = new Date();
+
     await task.save();
 
     await changeCandidateStatus(
@@ -170,6 +174,9 @@ export const reviewTask =
       task.reviewOutcome = "SATISFIED";
       task.reviewNotes = payload.reviewNotes || null;
       task.score = payload.score || null;
+      task.completed = true;
+      task.completedAt = new Date();
+      task.reviewReason = payload.reason || null;
       await task.save();
 
       await createAuditLog({
@@ -206,6 +213,8 @@ export const reviewTask =
       task.reviewReason = payload.reason;
       task.reviewNotes = payload.reviewNotes || null;
       task.score = payload.score || null;
+      task.completed = true;
+      task.completedAt = new Date();
       await task.save();
 
       await createAuditLog({
@@ -242,6 +251,7 @@ export const reviewTask =
       task.reviewReason = payload.reason || null;
       task.reviewNotes = payload.reviewNotes || null;
       task.score = payload.score || null;
+      task.completed = false;
       await task.save();
 
       await createAuditLog({
@@ -262,6 +272,8 @@ export const reviewTask =
         deadline: payload.newDeadline,
         reTaskOf: task._id,
         status: "ASSIGNED",
+        projectDemoStatus: task.projectDemoStatus ?? "PENDING",
+        remarks: task.remarks,
       });
 
       await createAuditLog({

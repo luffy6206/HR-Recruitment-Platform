@@ -11,7 +11,8 @@ export const createCall =
     const call =
       await callService.createCall(
         req.body,
-        req.user.id
+        req.user.id,
+        req.user.role
       );
 
     return successResponse(

@@ -130,6 +130,45 @@ const candidateSchema = new mongoose.Schema(
       analyzedAt: Date,
     },
 
+    // New call workflow fields
+    linedUp: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    fitment: {
+      type: String,
+      enum: ["Fit", "Not Fit"],
+      default: null,
+    },
+
+    interestStatus: {
+      type: String,
+      enum: ["Interested", "Not Interested", "Will Think", "Will Call Back", null],
+      default: null,
+    },
+
+    dropReason: {
+      type: String,
+      default: null,
+    },
+
+    callHistory: [
+      {
+        callNumber: Number,
+        outcome: String,
+        interestedStatus: String,
+        fitment: String,
+        notes: String,
+        hr: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        calledAt: Date,
+      },
+    ],
+
     // Duplicate detection
     emailHash: {
       type: String,

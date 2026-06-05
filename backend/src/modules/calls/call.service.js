@@ -20,7 +20,8 @@ import { changeCandidateStatus } from "../candidates/candidateStatus.service.js"
 export const createCall =
   async (
     payload,
-    userId
+    userId,
+    userRole
   ) => {
     const candidate =
       await Candidate.findById(
@@ -31,6 +32,20 @@ export const createCall =
       throw new AppError(
         "Candidate not found",
         404
+      );
+    }
+
+    const assignedHRId =
+      candidate.assignedHR &&
+      (candidate.assignedHR._id ?? candidate.assignedHR);
+
+    if (
+      userRole === "HR" &&
+      String(assignedHRId) !== userId
+    ) {
+      throw new AppError(
+        "Not authorized to log calls for this candidate",
+        403
       );
     }
 
@@ -78,45 +93,40 @@ export const createCall =
       payload.interestStatus ===
       INTEREST_STATUS.INTERESTED
     ) {
-      const doneStatus =
-        attemptNumber === 1
-          ? CANDIDATE_STATUS.FIRST_CALL_DONE
-          : attemptNumber === 2
-          ? CANDIDATE_STATUS.SECOND_CALL_DONE
-          : CANDIDATE_STATUS.THIRD_CALL_DONE;
-
+      // Set status to LINED_UP when candidate is interested
       await changeCandidateStatus(
         payload.candidateId,
-        doneStatus,
+        CANDIDATE_STATUS.LINED_UP,
         userId,
-        "Candidate interested"
+        "Candidate interested in opportunity"
       );
+
+      // Create timeline event for candidate lined up
+      await createTimelineEvent({
+        candidateId:
+          payload.candidateId,
+
+        eventType:
+          TIMELINE_EVENTS.CANDIDATE_LINED_UP,
+
+        title:
+          "Candidate Lined Up",
+
+        description: `Candidate is interested after ${attemptNumber === 1 ? "first" : attemptNumber === 2 ? "second" : "third"} call`,
+
+        performedBy: userId,
+      });
     } else {
-      if (attemptNumber === 1) {
-        await changeCandidateStatus(
-          payload.candidateId,
-          CANDIDATE_STATUS.SECOND_CALL_PENDING,
-          userId,
-          "First call attempt logged"
-        );
-      } else if (attemptNumber === 2) {
-        await changeCandidateStatus(
-          payload.candidateId,
-          CANDIDATE_STATUS.THIRD_CALL_PENDING,
-          userId,
-          "Second call attempt logged"
-        );
-      } else if (
-        attemptNumber === 3 &&
-        payload.outcome === CALL_OUTCOMES.NOT_PICKED
-      ) {
+      // If not interested and max calls reached, drop candidate
+      if (attemptNumber === 3) {
         await changeCandidateStatus(
           payload.candidateId,
           CANDIDATE_STATUS.DROPPED,
           userId,
-          "Call Not Picked"
+          "Dropped after 3 unsuccessful call attempts"
         );
       }
+      // Otherwise, candidate remains in their current status for follow-up calls
     }
 
     if (

@@ -55,7 +55,8 @@ export const updateCandidate =
       await candidateService.updateCandidate(
         req.params.id,
         req.body,
-        req.user.id
+        req.user.id,
+        req.user.role
       );
 
     return successResponse(

@@ -52,3 +52,73 @@ export const dropCandidate =
       "Candidate dropped"
     );
   });
+
+export const addSkill =
+  asyncHandler(async (req, res) => {
+    const candidate =
+      await workflowService.addSkill(
+        req.params.id,
+        req.body.skill,
+        req.user.id,
+        req.user.role
+      );
+
+    return successResponse(
+      res,
+      candidate,
+      "Skill added"
+    );
+  });
+
+export const addProject =
+  asyncHandler(async (req, res) => {
+    const project = req.body;
+    const candidate = await workflowService.addProject(
+      req.params.id,
+      project,
+      req.user.id,
+      req.user.role
+    );
+
+    return successResponse(res, candidate, "Project added");
+  });
+
+export const updateProject =
+  asyncHandler(async (req, res) => {
+    const project = req.body;
+    const candidate = await workflowService.updateProject(
+      req.params.id,
+      Number(req.params.index),
+      project,
+      req.user.id,
+      req.user.role
+    );
+
+    return successResponse(res, candidate, "Project updated");
+  });
+
+export const deleteProject =
+  asyncHandler(async (req, res) => {
+    const candidate = await workflowService.deleteProject(
+      req.params.id,
+      Number(req.params.index),
+      req.user.id,
+      req.user.role
+    );
+
+    return successResponse(res, candidate, "Project deleted");
+  });
+
+export const logCall =
+  asyncHandler(async (req, res) => {
+    const payload = req.body;
+
+    const result = await workflowService.logCall(
+      req.params.id,
+      payload,
+      req.user.id,
+      req.user.role
+    );
+
+    return successResponse(res, result, "Call logged");
+  });

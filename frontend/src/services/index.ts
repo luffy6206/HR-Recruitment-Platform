@@ -17,17 +17,36 @@ import { http } from "./http";
 
 // ─── Normalizers ────────────────────────────────────────────────────────────
 
-const normalizeCandidate = (candidate: any): Candidate => ({
-  id: candidate._id ?? candidate.id ?? "",
-  code: candidate.code ?? "",
-  name: candidate.name ?? "Unknown Candidate",
-  email: candidate.email ?? "",
-  phone: candidate.phone ?? "",
-  category: candidate.category ?? "General",
-  status: candidate.status ?? "NEW",
-  createdAt: candidate.createdAt ?? new Date().toISOString(),
-  assignedTo: candidate.assignedHR ?? candidate.assignedTo ?? undefined,
-});
+const normalizeCandidate = (candidate: any): Candidate => {
+  let assignedTo: string | undefined;
+  let assignedToId: string | undefined;
+  const assignedHR = candidate.assignedHR ?? candidate.assignedTo;
+
+  if (assignedHR && typeof assignedHR === "object") {
+    assignedTo = assignedHR.name ?? assignedHR.email ?? undefined;
+    assignedToId = assignedHR._id ?? assignedHR.id ?? undefined;
+  } else if (typeof assignedHR === "string") {
+    assignedTo = assignedHR;
+    assignedToId = assignedHR;
+  }
+
+  return {
+    id: candidate._id ?? candidate.id ?? "",
+    code: candidate.code ?? "",
+    name: candidate.name ?? "Unknown Candidate",
+    email: candidate.email ?? "",
+    phone: candidate.phone ?? "",
+    category: candidate.category ?? "General",
+    status: candidate.status ?? "NEW",
+    createdAt: candidate.createdAt ?? new Date().toISOString(),
+    assignedTo,
+    assignedToId,
+    candidateType:
+      candidate.candidateType ??
+      candidate.profile?.candidateType ??
+      undefined,
+  };
+};
 
 const normalizeTimeline = (t: any): TimelineEvent => ({
   id: t._id ?? t.id ?? "",
@@ -71,19 +90,38 @@ const normalizeInterview = (i: any): Interview => ({
 
 const normalizeTask = (t: any): Task => ({
   id: t._id ?? t.id ?? "",
-  title: t.title ?? "",
-  description: t.description ?? undefined,
-  status: t.status ?? "ASSIGNED",
-  priority: t.priority ?? "MEDIUM",
-  dueDate: t.deadline ?? t.dueDate ?? "",
-  assigneeName:
-    typeof t.assignedBy === "object" && t.assignedBy !== null
-      ? t.assignedBy.name ?? "—"
-      : t.assigneeName ?? "—",
+  candidateId:
+    typeof t.candidateId === "object" && t.candidateId !== null
+      ? t.candidateId._id ?? t.candidateId.id ?? undefined
+      : t.candidateId ?? undefined,
   candidateName:
     typeof t.candidateId === "object" && t.candidateId !== null
       ? t.candidateId.name ?? undefined
       : t.candidateName ?? undefined,
+  title: t.title ?? "",
+  description: t.description ?? undefined,
+  status: t.status ?? "ASSIGNED",
+  priority: t.priority ?? "MEDIUM",
+  dueDate: t.deadline ?? t.dueDate ?? undefined,
+  startDate: t.startDate ?? undefined,
+  endDate: t.endDate ?? undefined,
+  submissionLink: t.submissionLink ?? undefined,
+  reviewOutcome: t.reviewOutcome ?? undefined,
+  reviewNotes: t.reviewNotes ?? undefined,
+  reviewReason: t.reviewReason ?? undefined,
+  score: t.score ?? undefined,
+  completed: t.completed ?? false,
+  projectDemoStatus: t.projectDemoStatus ?? undefined,
+  remarks: t.remarks ?? undefined,
+  assigneeName:
+    typeof t.assignedBy === "object" && t.assignedBy !== null
+      ? t.assignedBy.name ?? "—"
+      : t.assigneeName ?? "—",
+  assignedByName:
+    typeof t.assignedBy === "object" && t.assignedBy !== null
+      ? t.assignedBy.name ?? undefined
+      : undefined,
+  createdAt: t.createdAt ?? undefined,
 });
 
 const normalizeNotification = (n: any): NotificationItem => ({
@@ -217,6 +255,30 @@ export const candidateService = {
     const response = await http.patch(`/candidates/${id}/drop`, { reason });
     return normalizeCandidate(response.data);
   },
+
+  async addSkill(id: string, skill: string): Promise<Candidate> {
+    const response = await http.patch(`/candidates/${id}/add-skill`, { skill });
+    return normalizeCandidate(response.data);
+  },
+
+  async addProject(id: string, project: { name: string; description: string; type: string }): Promise<Candidate> {
+    const response = await http.post(`/candidates/${id}/projects`, project);
+    return normalizeCandidate(response.data);
+  },
+
+  async updateProject(
+    id: string,
+    index: number,
+    project: { name: string; description: string; type: string }
+  ): Promise<Candidate> {
+    const response = await http.patch(`/candidates/${id}/projects/${index}`, project);
+    return normalizeCandidate(response.data);
+  },
+
+  async deleteProject(id: string, index: number): Promise<Candidate> {
+    const response = await http.delete(`/candidates/${id}/projects/${index}`);
+    return normalizeCandidate(response.data);
+  },
 };
 
 // ─── Calls ──────────────────────────────────────────────────────────────────
@@ -228,7 +290,8 @@ export const callService = {
     interestStatus: string;
     note?: string;
   }) {
-    const response = await http.post("/calls", data);
+    // Backend call logging is exposed on candidate workflow endpoint
+    const response = await http.post(`/candidates/${data.candidateId}/log-call`, data);
     return response.data;
   },
 
@@ -262,6 +325,17 @@ export const interviewService = {
     return normalizeInterview(response.data);
   },
 
+  async bulkSchedule(data: {
+    candidateIds: string[];
+    interviewType: string;
+    scheduledAt: string;
+    interviewerName: string;
+    meetingLink?: string;
+  }) {
+    const response = await http.post("/interviews/bulk/schedule", data);
+    return response.data;
+  },
+
   async complete(id: string, data: { feedback: string; rating: number }): Promise<Interview> {
     const response = await http.patch(`/interviews/${id}/complete`, data);
     return normalizeInterview(response.data);
@@ -284,8 +358,12 @@ export const taskService = {
   async create(data: {
     candidateId: string;
     title: string;
-    description: string;
-    deadline: string;
+    description?: string;
+    deadline?: string;
+    startDate?: string;
+    endDate?: string;
+    projectDemoStatus?: string;
+    remarks?: string;
   }): Promise<Task> {
     const response = await http.post("/tasks", data);
     return normalizeTask(response.data);

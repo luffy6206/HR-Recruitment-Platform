@@ -12,12 +12,10 @@ export type CandidateStatus =
   | "NEW"
   | "AI_PROCESSING"
   | "AI_PROCESSED"
-  | "FIRST_CALL_PENDING"
   | "FIRST_CALL_DONE"
-  | "SECOND_CALL_PENDING"
   | "SECOND_CALL_DONE"
-  | "THIRD_CALL_PENDING"
   | "THIRD_CALL_DONE"
+  | "LINED_UP"
   | "INTERVIEW_SCHEDULED"
   | "INTERVIEW_COMPLETED"
   | "TASK_ASSIGNED"
@@ -35,14 +33,29 @@ export interface Candidate {
   status: CandidateStatus;
   createdAt: string;
   assignedTo?: string;
+  assignedToId?: string;
+  candidateType?: "PASSOUT" | "STUDENT";
 }
 
 export interface CandidateProfile {
   education: { degree: string; institute: string; year: string }[];
   skills: string[];
   experience: { company: string; role: string; from: string; to: string }[];
-  projects: { name: string; description: string }[];
+  projects: { name: string; description: string; type?: string }[];
   certifications: { name: string; issuer: string; year: string }[];
+  technicalTraining?: {
+    completed: boolean;
+    trainingName?: string;
+    institute?: string;
+    duration?: string;
+    completionYear?: number;
+  };
+  currentLocation?: string;
+  permanentLocation?: string;
+  passingYear?: number;
+  candidateType?: "PASSOUT" | "STUDENT";
+  academicYear?: string;
+  cgpa?: number;
 }
 
 export interface TimelineEvent {
@@ -73,18 +86,31 @@ export interface Interview {
   status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
 }
 
-export type TaskStatus = "ASSIGNED" | "SUBMITTED" | "REVIEWED" | "PASSED" | "FAILED";
+export type TaskStatus = "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED" | "REVIEWED" | "PASSED" | "FAILED";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
 export interface Task {
   id: string;
+  candidateId?: string;
   candidateName?: string;
   title: string;
   description?: string;
   status: TaskStatus;
   priority: TaskPriority;
-  dueDate: string;
+  dueDate?: string;
+  startDate?: string;
+  endDate?: string;
+  submissionLink?: string;
+  reviewOutcome?: string;
+  reviewNotes?: string;
+  reviewReason?: string;
+  score?: number;
+  completed?: boolean;
+  projectDemoStatus?: string;
+  remarks?: string;
   assigneeName: string;
+  assignedByName?: string;
+  createdAt?: string;
 }
 
 export interface DailyReport {

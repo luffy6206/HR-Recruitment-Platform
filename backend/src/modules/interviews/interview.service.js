@@ -56,6 +56,14 @@ export const createInterview =
       );
     }
 
+    // Check if candidate is LINED_UP
+    if (candidate.status !== CANDIDATE_STATUS.LINED_UP) {
+      throw new AppError(
+        "Interview can only be scheduled for candidates in LINED_UP status",
+        400
+      );
+    }
+
     const interview =
       await Interview.create({
         ...payload,
@@ -84,7 +92,7 @@ export const createInterview =
       title:
         "Interview Scheduled",
 
-      description: `${payload.interviewType} interview scheduled`,
+      description: `${payload.interviewType} interview scheduled for ${payload.interviewDate}`,
 
       performedBy:
         userId,
@@ -218,4 +226,87 @@ export const evaluateInterview = async (
   }
 
   return interview;
+};
+
+export const bulkScheduleInterviews = async (
+  payload,
+  userId
+) => {
+  const { candidateIds, interviewType, scheduledAt, interviewerName, meetingLink } = payload;
+
+  if (!candidateIds || candidateIds.length === 0) {
+    throw new AppError("No candidates selected", 400);
+  }
+
+  if (!interviewerName) {
+    throw new AppError("Interviewer name is required", 400);
+  }
+
+  if (!scheduledAt) {
+    throw new AppError("Scheduled date/time is required", 400);
+  }
+
+  const scheduledDate = new Date(scheduledAt);
+  if (Number.isNaN(scheduledDate.getTime())) {
+    throw new AppError("Invalid scheduled date/time", 400);
+  }
+
+  const results = [];
+  const errors = [];
+
+  for (const candidateId of candidateIds) {
+    try {
+      const candidate = await Candidate.findById(candidateId);
+      
+      if (!candidate) {
+        errors.push({ candidateId, message: "Candidate not found" });
+        continue;
+      }
+
+      if (candidate.status !== CANDIDATE_STATUS.LINED_UP) {
+        errors.push({ 
+          candidateId, 
+          message: `Candidate status is ${candidate.status}, must be LINED_UP` 
+        });
+        continue;
+      }
+
+      const interview = await Interview.create({
+        candidateId,
+        interviewType,
+        scheduledAt: scheduledDate,
+        interviewerName,
+        meetingLink,
+        scheduledBy: userId,
+      });
+
+      await changeCandidateStatus(
+        candidateId,
+        CANDIDATE_STATUS.INTERVIEW_SCHEDULED,
+        userId,
+        "Interview scheduled"
+      );
+
+      await createTimelineEvent({
+        candidateId,
+        eventType: TIMELINE_EVENTS.INTERVIEW_SCHEDULED,
+        title: "Interview Scheduled",
+        description: `${interviewType} interview scheduled for ${scheduledDate.toISOString()}`,
+        performedBy: userId,
+      });
+
+      await createNotification({
+        userId,
+        title: "Interview Scheduled",
+        message: `Interview has been scheduled for ${candidate.name}`,
+        type: "INTERVIEW",
+      });
+
+      results.push({ candidateId, success: true, interview });
+    } catch (error) {
+      errors.push({ candidateId, message: error.message });
+    }
+  }
+
+  return { scheduled: results, failed: errors };
 };

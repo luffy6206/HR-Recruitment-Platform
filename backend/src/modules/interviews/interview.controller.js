@@ -77,3 +77,19 @@ export const evaluateInterview =
       "Interview evaluated"
     );
   });
+
+export const bulkScheduleInterviews =
+  asyncHandler(async (req, res) => {
+    const result =
+      await interviewService.bulkScheduleInterviews(
+        req.body,
+        req.user.id
+      );
+
+    return successResponse(
+      res,
+      result,
+      `Interviews scheduled for ${result.scheduled.length} candidate(s)`,
+      201
+    );
+  });

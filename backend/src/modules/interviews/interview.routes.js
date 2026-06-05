@@ -34,6 +34,12 @@ router.post(
   controller.createInterview
 );
 
+router.post(
+  "/bulk/schedule",
+  protect,
+  controller.bulkScheduleInterviews
+);
+
 router.patch(
   "/:id/complete",
   protect,

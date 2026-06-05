@@ -43,7 +43,7 @@ const upload = multer({
 router.post(
   "/upload-resumes",
   protect,
-  authorize(ROLES.ADMIN, ROLES.HR),
+  authorize(ROLES.ADMIN),
   upload.array("resumes", 10),
   controller.uploadResumes
 );

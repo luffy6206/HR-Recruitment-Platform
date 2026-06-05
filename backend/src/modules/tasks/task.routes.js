@@ -6,6 +6,7 @@ import validateRequest from "../../shared/utils/validateRequest.js";
 
 import {
   createTaskValidation,
+  submitTaskValidation,
   evaluateTaskValidation,
 } from "./task.validation.js";
 
@@ -37,6 +38,8 @@ router.post(
 router.patch(
   "/:id/submit",
   protect,
+  submitTaskValidation,
+  validateRequest,
   controller.submitTask
 );
 
