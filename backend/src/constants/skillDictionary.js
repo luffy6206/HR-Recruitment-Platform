@@ -389,12 +389,21 @@ export const DEGREE_KEYWORDS = [
     "BE",
     "BCA",
     "BSc",
+    "BBA",
+    "B.Com",
+    "BA",
+
     "M.Tech",
     "ME",
     "MCA",
     "MSc",
     "MBA",
-    "Diploma"
+    "M.Com",
+    "MA",
+
+    "Diploma",
+    "PhD",
+    "Doctorate"
 ];
 
 export const COLLEGE_KEYWORDS = [

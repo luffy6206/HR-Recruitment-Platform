@@ -1,5 +1,5 @@
 import { ALL_SKILLS, SKILL_CATEGORIES, DEGREE_KEYWORDS, COLLEGE_KEYWORDS, COMMON_CERTIFICATIONS } from "../constants/skillDictionary.js";
-
+import { COLLEGE_ALIASES } from "../constants/collegeDictionary.js";
 // ─── Placeholder Detection ──────────────────────────────────────────────────
 
 const PLACEHOLDER_EMAILS = new Set([
@@ -59,6 +59,22 @@ function isPlaceholderPhone(phone) {
   if (digits === "1234567890") return true;
 
   return false;
+}
+
+function detectCollege(text) {
+  const lowerText = text.toLowerCase();
+
+  for (const [college, aliases] of Object.entries(COLLEGE_ALIASES)) {
+    const found = aliases.some(alias =>
+      lowerText.includes(alias.toLowerCase())
+    );
+
+    if (found) {
+      return college;
+    }
+  }
+
+  return null;
 }
 
 function isPlaceholderEmail(email) {
@@ -297,7 +313,7 @@ function parseEducation(sectionLines) {
     const yearMatch = trimmed.match(/\b(19|20)\d{2}\b/g);
     // CGPA pattern
     const cgpaMatch = trimmed.match(/(?:CGPA|GPA|GRADE|cgpa|gpa)[\s:]*(\d+\.?\d*)/i) ||
-                       trimmed.match(/(\d+\.\d+)\s*(?:\/\s*(?:10|4)(?:\.0)?|CGPA|GPA)/i);
+      trimmed.match(/(\d+\.\d+)\s*(?:\/\s*(?:10|4)(?:\.0)?|CGPA|GPA)/i);
 
     if (hasDegree || hasCollege) {
       // New entry
@@ -318,7 +334,7 @@ function parseEducation(sectionLines) {
         if (afterDegree[1]) {
           // Remove year at the end e.g. "Expected 2027" or "2024"
           let specStr = afterDegree[1].replace(/^[\s\-–—,in]+/i, "").replace(/[,\-–—]?\s*(?:Expected\s*)?\d{4}.*$/i, "").trim();
-          
+
           if (hasCollege) {
             // Split by common separators to isolate college
             const parts = specStr.split(/\s*(?:[-–—|]|\s,\s)\s*/);
@@ -329,7 +345,7 @@ function parseEducation(sectionLines) {
                 break;
               }
             }
-            
+
             if (colIdx > 0) {
               current.specialization = parts.slice(0, colIdx).join(" ").trim();
               current.college = parts.slice(colIdx).join(" ").trim();
@@ -846,6 +862,18 @@ export function fallbackParseResume(resumeText, preDetectedSkills = null) {
   // 3. Parse each section
   const educationLines = getSectionLines(lines, sections, "EDUCATION");
   const education = parseEducation(educationLines);
+  const detectedCollege = detectCollege(resumeText);
+
+  if (detectedCollege) {
+    education.forEach(edu => {
+      if (
+        !edu.college ||
+        edu.college.length < 5
+      ) {
+        edu.college = detectedCollege;
+      }
+    });
+  }
 
   const experienceLines = getSectionLines(lines, sections, "EXPERIENCE");
   const experience = parseExperience(experienceLines);
