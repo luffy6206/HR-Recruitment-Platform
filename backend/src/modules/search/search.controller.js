@@ -12,7 +12,7 @@ export const search =
   asyncHandler(async (req, res) => {
     const results =
       await globalSearch(
-        req.query.q
+        req.query
       );
 
     return successResponse(

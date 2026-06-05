@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-06-04T13:26:49.571Z",
+  "files": [
+    {
+      "fileName": "Stockholm-Resume-Template-Simple.pdf",
+      "mimeType": "application/pdf",
+      "size": 43430,
+      "extracted": {
+        "length": 2448,
+        "preview": "Jason Miller\nAmazon Associate\nProfile\nExperienced Amazon Associate with five years’ tenure in a shipping yard\nsetting, maintaining an average picking/packing speed of 98%. Holds a\nzero error% score in adhering to packing specs and 97% error-free ratio\non packing records. Completed a certificate in W"
+      },
+      "resolved": {
+        "name": "Unknown Candidate",
+        "email": "email@email.com",
+        "phone": "3868683442"
+      },
+      "savedPath": "/uploads/resumes/1780579610189-Stockholm-Resume-Template-Simple.pdf",
+      "insert": {
+        "id": "6a217d1a8dd6d689394b5830",
+        "code": "CAN-2026-0029"
+      },
+      "result": {
+        "id": "6a217d1a8dd6d689394b5830",
+        "name": "Unknown Candidate",
+        "email": "email@email.com",
+        "code": "CAN-2026-0029"
+      }
+    }
+  ],
+  "stages": [
+    {
+      "stage": "pdf_extraction",
+      "file": "Stockholm-Resume-Template-Simple.pdf",
+      "length": 2448
+    },
+    {
+      "stage": "ai_analysis",
+      "file": "Stockholm-Resume-Template-Simple.pdf",
+      "model": null,
+      "promptPreview": null,
+      "raw": null
+    },
+    {
+      "stage": "candidate_mapping",
+      "file": "Stockholm-Resume-Template-Simple.pdf",
+      "payload": {
+        "name": "Unknown Candidate",
+        "email": "email@email.com",
+        "phone": "3868683442",
+        "category": "Imported from Resume",
+        "status": "NEW",
+        "source": "RESUME",
+        "resumeFilePath": "/uploads/resumes/1780579610189-Stockholm-Resume-Template-Simple.pdf",
+        "aiAnalysis": {
+          "skills": [
+            "REST",
+            "AI"
+          ],
+          "experienceYears": 0,
+          "education": "",
+          "currentCompany": "",
+          "designation": "",
+          "location": "",
+          "summary": "Candidate resume parsed via fallback (AI unavailable). 2 skills detected.",
+          "resumeScore": 40,
+          "confidenceScores": {},
+          "analyzedAt": "2026-06-04T13:26:50.191Z"
+        },
+        "emailHash": "4f64c9f81bb0d4ee969aaf7b4a5a6f40"
+      }
+    },
+    {
+      "stage": "candidate_insert",
+      "file": "Stockholm-Resume-Template-Simple.pdf",
+      "id": "6a217d1a8dd6d689394b5830",
+      "code": "CAN-2026-0029"
+    },
+    {
+      "stage": "profile_update",
+      "file": "Stockholm-Resume-Template-Simple.pdf",
+      "id": "6a217d1a8dd6d689394b5830"
+    }
+  ]
+}

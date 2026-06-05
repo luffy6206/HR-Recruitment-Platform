@@ -1,0 +1,81 @@
+{
+  "timestamp": "2026-06-04T15:12:40.214Z",
+  "files": [
+    {
+      "fileName": "dummy.pdf",
+      "mimeType": "application/pdf",
+      "size": 13264,
+      "extracted": {
+        "length": 30,
+        "preview": "Dummy PDF file\n\n-- 1 of 1 --\n\n"
+      },
+      "resolved": {
+        "name": "Unknown Candidate",
+        "email": "unknown-1780585960829-uz5nm2@example.com",
+        "phone": "000-000-0000"
+      },
+      "savedPath": "/uploads/resumes/1780585960829-dummy.pdf",
+      "insert": {
+        "id": "6a2195e8b2e42effc01516dc",
+        "code": "CAN-2026-0030"
+      },
+      "result": {
+        "id": "6a2195e8b2e42effc01516dc",
+        "name": "Unknown Candidate",
+        "email": "unknown-1780585960829-uz5nm2@example.com",
+        "code": "CAN-2026-0030"
+      }
+    }
+  ],
+  "stages": [
+    {
+      "stage": "pdf_extraction",
+      "file": "dummy.pdf",
+      "length": 30
+    },
+    {
+      "stage": "ai_analysis",
+      "file": "dummy.pdf",
+      "model": null,
+      "promptPreview": null,
+      "raw": null
+    },
+    {
+      "stage": "candidate_mapping",
+      "file": "dummy.pdf",
+      "payload": {
+        "name": "Unknown Candidate",
+        "email": "unknown-1780585960829-uz5nm2@example.com",
+        "phone": "000-000-0000",
+        "category": "Imported from Resume",
+        "status": "NEW",
+        "source": "RESUME",
+        "resumeFilePath": "/uploads/resumes/1780585960829-dummy.pdf",
+        "aiAnalysis": {
+          "skills": [],
+          "experienceYears": 0,
+          "education": "",
+          "currentCompany": "",
+          "designation": "",
+          "location": "",
+          "summary": "Candidate resume parsed via fallback (AI unavailable). 0 skills detected.",
+          "resumeScore": 0,
+          "confidenceScores": {},
+          "analyzedAt": "2026-06-04T15:12:40.830Z"
+        },
+        "emailHash": null
+      }
+    },
+    {
+      "stage": "candidate_insert",
+      "file": "dummy.pdf",
+      "id": "6a2195e8b2e42effc01516dc",
+      "code": "CAN-2026-0030"
+    },
+    {
+      "stage": "profile_update",
+      "file": "dummy.pdf",
+      "id": "6a2195e8b2e42effc01516dc"
+    }
+  ]
+}

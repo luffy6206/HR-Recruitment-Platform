@@ -1,0 +1,113 @@
+{
+  "timestamp": "2026-06-05T06:34:01.560Z",
+  "files": [
+    {
+      "fileName": "ResumeAhamSaini.pdf",
+      "mimeType": "application/pdf",
+      "size": 90804,
+      "extracted": {
+        "length": 1717,
+        "preview": "A W A R D S &\nS C H O L A R S H I P S\nC O N T A C T\nS K I L L S\n9720877130\nsainiaham890@gmail.com\nSaharanpur Uttar Pardesh\nAham Saini\nAI Agent Development\nGit & GitHub\nHTML\nCSS\nJavaScript\nJava\nMySQL\nPrompt Engineering\nRest APIs\nSpring Boot\nVS Code\nRAG (Retrieval-Augmented\nGeneration)\nAHAM SAINI\nFULL"
+      },
+      "resolved": {
+        "name": "Saharanpur Uttar Pardesh",
+        "email": "sainiaham890@gmail.com",
+        "phone": "9720877130"
+      },
+      "savedPath": "/uploads/resumes/1780641242198-ResumeAhamSaini.pdf",
+      "insert": {
+        "id": "6a226dda45da3b5cce8852f8",
+        "code": "CAN-2026-0031"
+      },
+      "result": {
+        "id": "6a226dda45da3b5cce8852f8",
+        "name": "Saharanpur Uttar Pardesh",
+        "email": "sainiaham890@gmail.com",
+        "code": "CAN-2026-0031"
+      }
+    }
+  ],
+  "stages": [
+    {
+      "stage": "pdf_extraction",
+      "file": "ResumeAhamSaini.pdf",
+      "length": 1717
+    },
+    {
+      "stage": "ai_analysis",
+      "file": "ResumeAhamSaini.pdf",
+      "model": null,
+      "promptPreview": null,
+      "raw": null
+    },
+    {
+      "stage": "candidate_mapping",
+      "file": "ResumeAhamSaini.pdf",
+      "payload": {
+        "name": "Saharanpur Uttar Pardesh",
+        "email": "sainiaham890@gmail.com",
+        "phone": "9720877130",
+        "category": "Imported from Resume",
+        "status": "NEW",
+        "source": "RESUME",
+        "resumeFilePath": "/uploads/resumes/1780641242198-ResumeAhamSaini.pdf",
+        "aiAnalysis": {
+          "skills": [
+            "Java",
+            "JavaScript",
+            "C",
+            "Go",
+            "Scala",
+            "R",
+            "HTML",
+            "CSS",
+            "Spring Boot",
+            "REST API",
+            "MySQL",
+            "Prompt Engineering",
+            "RAG",
+            "Git",
+            "GitHub",
+            "VS Code",
+            "Leadership"
+          ],
+          "experienceYears": 0,
+          "education": "[]",
+          "currentCompany": "",
+          "designation": "",
+          "location": "",
+          "summary": "Candidate resume parsed via primary parser. 17 skills detected, 0 experience entries, 0 education entries, 0 projects, 0 certifications.",
+          "resumeScore": 40,
+          "confidenceScores": {
+            "name": 95,
+            "email": 95,
+            "phone": 95,
+            "linkedin": 0,
+            "github": 0,
+            "location": 0,
+            "skills": 60,
+            "education": 0,
+            "experience": 0,
+            "projects": 0,
+            "certifications": 0,
+            "experienceYears": 0,
+            "inferredSkills": 0
+          },
+          "analyzedAt": "2026-06-05T06:34:02.200Z"
+        },
+        "emailHash": "32d7e15fb35b90d4ec71fae06fafc9bc"
+      }
+    },
+    {
+      "stage": "candidate_insert",
+      "file": "ResumeAhamSaini.pdf",
+      "id": "6a226dda45da3b5cce8852f8",
+      "code": "CAN-2026-0031"
+    },
+    {
+      "stage": "profile_update",
+      "file": "ResumeAhamSaini.pdf",
+      "id": "6a226dda45da3b5cce8852f8"
+    }
+  ]
+}

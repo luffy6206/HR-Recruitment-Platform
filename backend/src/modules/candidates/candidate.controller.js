@@ -26,7 +26,8 @@ export const getCandidates =
   asyncHandler(async (req, res) => {
     const result =
       await candidateService.getCandidates(
-        req.query
+        req.query,
+        req.user
       );
 
     return successResponse(
@@ -54,7 +55,8 @@ export const updateCandidate =
       await candidateService.updateCandidate(
         req.params.id,
         req.body,
-        req.user.id
+        req.user.id,
+        req.user.role
       );
 
     return successResponse(

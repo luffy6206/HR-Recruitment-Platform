@@ -20,7 +20,8 @@ import { changeCandidateStatus } from "../candidates/candidateStatus.service.js"
 export const createCall =
   async (
     payload,
-    userId
+    userId,
+    userRole
   ) => {
     const candidate =
       await Candidate.findById(
@@ -34,11 +35,32 @@ export const createCall =
       );
     }
 
+    const assignedHRId =
+      candidate.assignedHR &&
+      (candidate.assignedHR._id ?? candidate.assignedHR);
+
+    if (
+      userRole === "HR" &&
+      String(assignedHRId) !== userId
+    ) {
+      throw new AppError(
+        "Not authorized to log calls for this candidate",
+        403
+      );
+    }
+
     const previousCalls =
       await Call.countDocuments({
         candidateId:
           payload.candidateId,
       });
+
+    if (previousCalls >= 3) {
+      throw new AppError(
+        "Maximum call attempts reached",
+        400
+      );
+    }
 
     const attemptNumber =
       previousCalls + 1;
@@ -71,31 +93,46 @@ export const createCall =
       payload.interestStatus ===
       INTEREST_STATUS.INTERESTED
     ) {
+      // Set status to LINED_UP when candidate is interested
       await changeCandidateStatus(
         payload.candidateId,
-
-        CANDIDATE_STATUS.CONTACTED,
-
+        CANDIDATE_STATUS.LINED_UP,
         userId,
-
-        "Candidate interested"
+        "Candidate interested in opportunity"
       );
+
+      // Create timeline event for candidate lined up
+      await createTimelineEvent({
+        candidateId:
+          payload.candidateId,
+
+        eventType:
+          TIMELINE_EVENTS.CANDIDATE_LINED_UP,
+
+        title:
+          "Candidate Lined Up",
+
+        description: `Candidate is interested after ${attemptNumber === 1 ? "first" : attemptNumber === 2 ? "second" : "third"} call`,
+
+        performedBy: userId,
+      });
+    } else {
+      // If not interested and max calls reached, drop candidate
+      if (attemptNumber === 3) {
+        await changeCandidateStatus(
+          payload.candidateId,
+          CANDIDATE_STATUS.DROPPED,
+          userId,
+          "Dropped after 3 unsuccessful call attempts"
+        );
+      }
+      // Otherwise, candidate remains in their current status for follow-up calls
     }
 
     if (
       payload.interestStatus ===
       INTEREST_STATUS.NEEDS_FOLLOW_UP
     ) {
-      await changeCandidateStatus(
-        payload.candidateId,
-
-        CANDIDATE_STATUS.FOLLOW_UP,
-
-        userId,
-
-        "Follow up required"
-      );
-
       await createNotification({
         userId,
 
@@ -108,22 +145,6 @@ export const createCall =
         type:
           "FOLLOW_UP",
       });
-    }
-
-    if (
-      payload.outcome ===
-        CALL_OUTCOMES.NOT_PICKED &&
-      attemptNumber >= 3
-    ) {
-      await changeCandidateStatus(
-        payload.candidateId,
-
-        CANDIDATE_STATUS.DROPPED,
-
-        userId,
-
-        "Three unsuccessful call attempts"
-      );
     }
 
     return call;

@@ -13,32 +13,70 @@ import { getPagination } from "../../shared/utils/pagination.js";
 
 import AppError from "../../shared/errors/AppError.js";
 
+const resolveCandidateType = (passingYear) => {
+  if (typeof passingYear !== "number") {
+    return null;
+  }
+
+  const currentYear = new Date().getFullYear();
+  return passingYear <= currentYear ? "PASSOUT" : "STUDENT";
+};
+
+export const findDuplicateCandidate = async ({ email, phone }) => {
+  const conditions = [];
+  if (email) {
+    conditions.push({ email });
+  }
+  if (phone) {
+    conditions.push({ phone });
+  }
+
+  if (conditions.length === 0) {
+    return null;
+  }
+
+  return Candidate.findOne({
+    $or: conditions,
+    isDeleted: false,
+  });
+};
+
 export const createCandidate = async (
   payload,
   userId
 ) => {
+  console.log('[CANDIDATE] createCandidate called');
+  // Candidate Validation & Sanitization Layer
+  const name = payload.name ?? payload.fullName ?? "Unknown Candidate";
+  const email = payload.email ? String(payload.email).toLowerCase().trim() : "";
+  const phone = payload.phone ? String(payload.phone).trim() : "";
+  const category = payload.category ?? "General";
+  const status = payload.status ?? payload.currentStatus ?? "NEW";
+  const assignedHR = payload.assignedHR ?? null; // Extract assignedHR from payload
+
   const duplicateConditions = [];
 
-  if (payload.email) {
+  if (email) {
     duplicateConditions.push({
-      email: payload.email.toLowerCase(),
+      email: email,
     });
   }
 
-  if (payload.phone) {
+  if (phone) {
     duplicateConditions.push({
-      phone: payload.phone,
+      phone: phone,
     });
   }
 
-  if (duplicateConditions.length) {
-    const existingCandidate =
-      await Candidate.findOne({
-        $or: duplicateConditions,
-        isDeleted: false,
-      });
+  // Allow bypassing duplicate checks for test runs by setting SKIP_DUPLICATE_CHECK=true
+  if (duplicateConditions.length && process.env.SKIP_DUPLICATE_CHECK !== 'true') {
+    const existingCandidate = await findDuplicateCandidate({
+      email: email || undefined,
+      phone: phone || undefined,
+    });
 
     if (existingCandidate) {
+      console.log("[DUPLICATE BLOCKED]", existingCandidate._id.toString());
       throw new AppError(
         "Candidate already exists",
         409
@@ -49,16 +87,34 @@ export const createCandidate = async (
   const candidateCode =
     await generateCandidateCode();
 
+  let finalCandidateCode = candidateCode;
+  if (!finalCandidateCode) {
+    finalCandidateCode = `CAN-${new Date().getFullYear()}-TMP-${Date.now()}`;
+  }
+
+  console.log('[CANDIDATE] Generated candidateCode:', finalCandidateCode);
+  console.log('[CANDIDATE] Creating candidate payload', {
+    name,
+    email: email || undefined,
+    phone: phone || undefined,
+    category,
+    status,
+    assignedHR: assignedHR || undefined,
+    code: finalCandidateCode,
+    candidateCode: finalCandidateCode,
+  });
+
   const candidate =
     await Candidate.create({
       ...payload,
-
-      email: payload.email
-        ? payload.email.toLowerCase()
-        : undefined,
-
-      candidateCode,
-
+      name,
+      email: email || undefined,
+      phone: phone || undefined,
+      category,
+      status,
+      assignedHR: assignedHR || undefined,
+      code: finalCandidateCode,
+      candidateCode: finalCandidateCode,
       uploadInfo: {
         uploadedBy: userId,
         uploadedAt: new Date(),
@@ -83,11 +139,27 @@ export const createCandidate = async (
     performedBy: userId,
   });
 
+  // Create additional timeline event for HR assignment if assignedHR is provided
+  if (assignedHR) {
+    await createTimelineEvent({
+      candidateId: candidate._id,
+
+      eventType: "HR_ASSIGNED",
+
+      title: "HR Assigned During Upload",
+
+      description: `Candidate assigned to HR during resume upload`,
+
+      performedBy: userId,
+    });
+  }
+
   return candidate;
 };
 
 export const getCandidates = async (
-  query
+  query,
+  user
 ) => {
   const {
     page,
@@ -104,10 +176,18 @@ export const getCandidates = async (
     isDeleted: false,
   };
 
+  // Role-based filtering: if user is HR, only show candidates assigned to them
+  if (user && user.role === "HR") {
+    filter.assignedHR = user.id;
+  } else if (assignedHR) {
+    // If user is ADMIN and specifies an assignedHR filter, apply it
+    filter.assignedHR = assignedHR;
+  }
+
   if (search) {
     filter.$or = [
       {
-        fullName: {
+        name: {
           $regex: search,
           $options: "i",
         },
@@ -128,11 +208,7 @@ export const getCandidates = async (
   }
 
   if (status) {
-    filter.currentStatus = status;
-  }
-
-  if (assignedHR) {
-    filter.assignedHR = assignedHR;
+    filter.status = status;
   }
 
   const candidates =
@@ -147,6 +223,27 @@ export const getCandidates = async (
         createdAt: -1,
       });
 
+  const candidateIds = candidates.map((candidate) => candidate._id);
+  const profiles = await CandidateProfile.find(
+    {
+      candidateId: { $in: candidateIds },
+    },
+    {
+      candidateId: 1,
+      candidateType: 1,
+    }
+  );
+
+  const profileMap = new Map(
+    profiles.map((profile) => [String(profile.candidateId), profile.candidateType])
+  );
+
+  const enrichedCandidates = candidates.map((candidate) => {
+    const candidateCopy = candidate.toObject ? candidate.toObject() : { ...candidate };
+    candidateCopy.candidateType = profileMap.get(String(candidate._id));
+    return candidateCopy;
+  });
+
   const total =
     await Candidate.countDocuments(
       filter
@@ -156,7 +253,7 @@ export const getCandidates = async (
     total,
     page: Number(page) || 1,
     limit: pageSize,
-    candidates,
+    candidates: enrichedCandidates,
   };
 };
 
@@ -167,7 +264,8 @@ export const getCandidateById = async (
     await Candidate.findOne({
       _id: id,
       isDeleted: false,
-    });
+    })
+      .populate("assignedHR", "name email role");
 
   if (!candidate) {
     throw new AppError(
@@ -212,7 +310,8 @@ export const getCandidateById = async (
 export const updateCandidate = async (
   id,
   payload,
-  userId
+  userId,
+  userRole
 ) => {
   const candidate =
     await Candidate.findOne({
@@ -227,86 +326,197 @@ export const updateCandidate = async (
     );
   }
 
+  const currentAssignedHR =
+    candidate.assignedHR &&
+    (candidate.assignedHR._id ?? candidate.assignedHR);
+
+  if (
+    userRole === "HR" &&
+    String(currentAssignedHR) !== userId
+  ) {
+    throw new AppError(
+      "Not authorized to update this candidate",
+      403
+    );
+  }
+
   const allowedFields = [
-    "fullName",
+    "name",
     "email",
     "phone",
     "category",
     "assignedHR",
-    "currentStatus",
+    "status",
+    "currentLocation",
+    "permanentLocation",
+    "technicalTraining",
+    "passingYear",
+    "candidateType",
+    "academicYear",
+    "cgpa",
   ];
 
   const updates = {};
 
   for (const field of allowedFields) {
-    if (
-      Object.prototype.hasOwnProperty.call(
-        payload,
-        field
-      )
-    ) {
-      updates[field] =
-        payload[field];
+    let payloadField = field;
+    if (field === "name" && !Object.prototype.hasOwnProperty.call(payload, "name") && Object.prototype.hasOwnProperty.call(payload, "fullName")) {
+      payloadField = "fullName";
+    }
+    if (field === "status" && !Object.prototype.hasOwnProperty.call(payload, "status") && Object.prototype.hasOwnProperty.call(payload, "currentStatus")) {
+      payloadField = "currentStatus";
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, payloadField)) {
+      updates[field] = payload[payloadField];
     }
   }
 
-  if (
-    updates.email
-  ) {
-    updates.email =
-      updates.email.toLowerCase();
+  if (updates.email) {
+    updates.email = updates.email.toLowerCase().trim();
   }
 
-  for (const key of Object.keys(
-    updates
-  )) {
-    const oldValue =
-      candidate[key];
+  if (userRole === "HR" && Object.prototype.hasOwnProperty.call(updates, "assignedHR")) {
+    const updatedAssignedHR = String(updates.assignedHR);
+    if (updatedAssignedHR !== String(currentAssignedHR)) {
+      throw new AppError(
+        "HR users cannot reassign candidates",
+        403
+      );
+    }
+  }
 
-    const newValue =
-      updates[key];
+  const changedFields = [];
 
-    if (
-      JSON.stringify(oldValue) !==
-      JSON.stringify(newValue)
-    ) {
+  for (const field of [
+    "name",
+    "email",
+    "phone",
+    "category",
+    "assignedHR",
+    "status",
+    "currentAddress",
+    "permanentAddress",
+    "technicalTraining",
+    "passingYear",
+    "candidateType",
+    "academicYear",
+    "cgpa",
+  ]) {
+    if (!Object.prototype.hasOwnProperty.call(updates, field)) {
+      continue;
+    }
+
+    const oldValue = candidate[field];
+    const newValue = updates[field];
+
+    if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
       await createAuditLog({
-        candidateId:
-          candidate._id,
-
-        fieldName: key,
-
+        candidateId: candidate._id,
+        fieldName: field,
         oldValue,
-
         newValue,
-
         changedBy: userId,
       });
+      changedFields.push(field);
     }
   }
 
-  Object.assign(
-    candidate,
-    updates
-  );
+  Object.assign(candidate, updates);
+
+  let profile = await CandidateProfile.findOne({ candidateId: id });
+  let profileChangedFields = [];
+  if (!profile && [
+    "currentLocation",
+    "permanentLocation",
+    "technicalTraining",
+    "passingYear",
+  ].some((field) => Object.prototype.hasOwnProperty.call(updates, field))) {
+    profile = await CandidateProfile.create({ candidateId: id });
+  }
+
+  if (profile) {
+    const profileFields = [
+      "currentLocation",
+      "permanentLocation",
+      "technicalTraining",
+      "passingYear",
+      "candidateType",
+      "academicYear",
+      "cgpa",
+    ];
+
+    for (const field of profileFields) {
+      if (!Object.prototype.hasOwnProperty.call(updates, field)) {
+        continue;
+      }
+
+      const oldValue = profile[field];
+      const newValue = updates[field];
+      if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+        profile[field] = newValue;
+        await createAuditLog({
+          candidateId: candidate._id,
+          fieldName: `profile.${field}`,
+          oldValue,
+          newValue,
+          changedBy: userId,
+        });
+        profileChangedFields.push(field);
+      }
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(updates, "passingYear") &&
+      !Object.prototype.hasOwnProperty.call(updates, "candidateType")
+    ) {
+      const computedType = resolveCandidateType(updates.passingYear);
+      if (computedType && profile.candidateType !== computedType) {
+        await createAuditLog({
+          candidateId: candidate._id,
+          fieldName: "profile.candidateType",
+          oldValue: profile.candidateType,
+          newValue: computedType,
+          changedBy: userId,
+          reason: "Candidate type computed from passing year",
+        });
+        profile.candidateType = computedType;
+        profileChangedFields.push("candidateType");
+      }
+    }
+
+    if (profileChangedFields.length > 0) {
+      await profile.save();
+    }
+  }
 
   await candidate.save();
 
-  await createTimelineEvent({
-    candidateId:
-      candidate._id,
+  if (changedFields.length > 0 || profileChangedFields.length > 0) {
+    const description = [
+      ...changedFields,
+      ...profileChangedFields,
+    ]
+      .map((field) => {
+        if (field === "passingYear") return "Passing year updated";
+        if (field === "candidateType") return "Candidate type updated";
+        if (field === "academicYear") return "Academic year updated";
+        if (field === "cgpa") return "CGPA updated";
+        if (field === "technicalTraining") return "Technical training details updated";
+        if (field === "currentLocation") return "Current location updated";
+        if (field === "permanentLocation") return "Permanent location updated";
+        return `${field} updated`;
+      })
+      .join(", ");
 
-    eventType:
-      TIMELINE_EVENTS.PROFILE_UPDATED,
-
-    title:
-      "Candidate Updated",
-
-    description:
-      "Candidate details updated",
-
-    performedBy: userId,
-  });
+    await createTimelineEvent({
+      candidateId: candidate._id,
+      eventType: TIMELINE_EVENTS.PROFILE_UPDATED,
+      title: "Candidate Profile Updated",
+      description,
+      performedBy: userId,
+    });
+  }
 
   return candidate;
 };

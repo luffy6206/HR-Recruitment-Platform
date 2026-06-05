@@ -32,9 +32,20 @@ router.get(
   "/",
   protect,
   authorize(
-    ROLES.ADMIN
+    ROLES.ADMIN,
+    ROLES.HR
   ),
   controller.getUsers
+);
+
+router.get(
+  "/role/hr",
+  protect,
+  authorize(
+    ROLES.ADMIN,
+    ROLES.HR
+  ),
+  controller.getHRUsers
 );
 
 router.get(

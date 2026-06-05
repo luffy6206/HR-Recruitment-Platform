@@ -28,9 +28,9 @@ export const changeCandidateStatus =
     }
 
     const oldStatus =
-      candidate.currentStatus;
+      candidate.status;
 
-    candidate.currentStatus =
+    candidate.status =
       status;
 
     await candidate.save();
@@ -39,7 +39,7 @@ export const changeCandidateStatus =
       candidateId,
 
       fieldName:
-        "currentStatus",
+        "status",
 
       oldValue: oldStatus,
 

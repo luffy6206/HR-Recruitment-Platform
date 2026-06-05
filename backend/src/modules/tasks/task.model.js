@@ -24,7 +24,24 @@ const taskSchema =
 
       description: String,
 
+      startDate: Date,
+
       deadline: Date,
+
+      endDate: Date,
+
+      remarks: String,
+
+      projectDemoStatus: {
+        type: String,
+        enum: ["PENDING", "SCHEDULED", "COMPLETED"],
+        default: "PENDING",
+      },
+
+      completed: {
+        type: Boolean,
+        default: false,
+      },
 
       submissionLink: String,
 
@@ -32,6 +49,7 @@ const taskSchema =
         type: String,
         enum: [
           "ASSIGNED",
+          "IN_PROGRESS",
           "SUBMITTED",
           "REVIEWED",
           "PASSED",
@@ -41,6 +59,25 @@ const taskSchema =
       },
 
       reviewNotes: String,
+
+      submittedAt: Date,
+      completedAt: Date,
+
+      // Re-task reference (points to original task if this is a re-task)
+      reTaskOf: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Task",
+        default: null,
+      },
+
+      // Review outcome after submission
+      reviewOutcome: {
+        type: String,
+        enum: ["SATISFIED", "NEEDS_IMPROVEMENT", "FAILED"],
+      },
+
+      // Reason for failure or rework request
+      reviewReason: String,
 
       score: {
         type: Number,

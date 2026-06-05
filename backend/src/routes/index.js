@@ -16,6 +16,7 @@ import candidateWorkflowRoutes from "../modules/candidates/candidateWorkflow.rou
 import settingsRoutes from "../modules/settings/settings.routes.js";
 import activityRoutes from "../modules/activity/activity.routes.js";
 import healthRoutes from "../modules/health/health.routes.js";
+import dailyReportRoutes from "../modules/dailyReports/dailyReport.routes.js";
 
 const router = express.Router();
 
@@ -80,6 +81,10 @@ router.use(
 router.use(
   "/health",
   healthRoutes
+);
+router.use(
+  "/daily-reports",
+  dailyReportRoutes
 );
 
 export default router;

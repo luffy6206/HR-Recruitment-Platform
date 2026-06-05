@@ -1,0 +1,90 @@
+{
+  "timestamp": "2026-06-04T12:51:48.133Z",
+  "files": [
+    {
+      "fileName": "BairanChakraborty_Resume.pdf",
+      "mimeType": "application/pdf",
+      "size": 245042,
+      "extracted": {
+        "length": 2303,
+        "preview": "BAIRAN CHAKRABORTY\nPhone: +91-8001306016 | Email: bairenchakraborty2004bc@gmail.com | GitHub: https://github.com/Bairen09\nPROFESSIONAL SUMMARY\nComputer Engineering undergraduate with strong backend development skills using Java and Spring Boot.\nExperienced in building scalable backend systems using "
+      },
+      "resolved": {
+        "name": "BAIRAN CHAKRABORTY",
+        "email": "bairenchakraborty2004bc@gmail.com",
+        "phone": "+91-8001306016"
+      },
+      "savedPath": "/uploads/resumes/1780577508553-BairanChakraborty_Resume.pdf",
+      "insert": {
+        "id": "6a2174e4da2a8798c7481824",
+        "code": "CAN-2026-0028"
+      },
+      "result": {
+        "id": "6a2174e4da2a8798c7481824",
+        "name": "BAIRAN CHAKRABORTY",
+        "email": "bairenchakraborty2004bc@gmail.com",
+        "code": "CAN-2026-0028"
+      }
+    }
+  ],
+  "stages": [
+    {
+      "stage": "pdf_extraction",
+      "file": "BairanChakraborty_Resume.pdf",
+      "length": 2303
+    },
+    {
+      "stage": "ai_analysis",
+      "file": "BairanChakraborty_Resume.pdf",
+      "model": null,
+      "promptPreview": null,
+      "raw": null
+    },
+    {
+      "stage": "candidate_mapping",
+      "file": "BairanChakraborty_Resume.pdf",
+      "payload": {
+        "name": "BAIRAN CHAKRABORTY",
+        "email": "bairenchakraborty2004bc@gmail.com",
+        "phone": "+91-8001306016",
+        "category": "Imported from Resume",
+        "status": "NEW",
+        "source": "RESUME",
+        "resumeFilePath": "/uploads/resumes/1780577508553-BairanChakraborty_Resume.pdf",
+        "aiAnalysis": {
+          "skills": [
+            "JavaScript",
+            "React",
+            "Python",
+            "Java",
+            "SQL",
+            "MongoDB",
+            "PostgreSQL",
+            "Git",
+            "HTML",
+            "CSS",
+            "Spring",
+            "REST",
+            "AI",
+            "Go"
+          ],
+          "experienceYears": 0,
+          "education": "",
+          "currentCompany": "",
+          "designation": "",
+          "location": "",
+          "summary": "Candidate resume parsed via fallback (AI unavailable). 14 skills detected.",
+          "resumeScore": 100,
+          "analyzedAt": "2026-06-04T12:51:48.564Z"
+        },
+        "emailHash": "083052b1762a60551510a49ab618dde5"
+      }
+    },
+    {
+      "stage": "candidate_insert",
+      "file": "BairanChakraborty_Resume.pdf",
+      "id": "6a2174e4da2a8798c7481824",
+      "code": "CAN-2026-0028"
+    }
+  ]
+}

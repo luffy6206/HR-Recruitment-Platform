@@ -119,3 +119,12 @@ export const deleteUser =
 
     return user;
   };
+
+export const getHRUsers =
+  async () => {
+    return User.find({ role: "HR" })
+      .select("-passwordHash")
+      .sort({
+        name: 1,
+      });
+  };

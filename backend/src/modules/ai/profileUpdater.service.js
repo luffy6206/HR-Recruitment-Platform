@@ -11,14 +11,32 @@ export const updateProfileFromResume =
         candidateId,
       },
       {
+        location:
+          extractedData.location,
+
         skills:
           extractedData.skills,
+
+        inferredSkills:
+          extractedData.inferredSkills,
 
         education:
           extractedData.education,
 
         experience:
           extractedData.experience,
+          
+        projects:
+          extractedData.projects,
+          
+        certifications:
+          extractedData.certifications,
+          
+        linkedin:
+          extractedData.linkedin,
+          
+        github:
+          extractedData.github,
       },
       {
         new: true,

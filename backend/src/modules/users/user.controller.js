@@ -73,3 +73,14 @@ export const deleteUser =
       "User deactivated"
     );
   });
+
+export const getHRUsers =
+  asyncHandler(async (req, res) => {
+    const users =
+      await userService.getHRUsers();
+
+    return successResponse(
+      res,
+      users
+    );
+  });

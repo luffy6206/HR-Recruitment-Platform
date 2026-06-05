@@ -6,6 +6,30 @@ import {
 
 import * as taskService from "./task.service.js";
 
+export const listTasks =
+  asyncHandler(async (req, res) => {
+    const tasks =
+      await taskService.listTasks();
+
+    return successResponse(
+      res,
+      tasks
+    );
+  });
+
+export const getTask =
+  asyncHandler(async (req, res) => {
+    const task =
+      await taskService.getTask(
+        req.params.id
+      );
+
+    return successResponse(
+      res,
+      task
+    );
+  });
+
 export const createTask =
   asyncHandler(async (req, res) => {
     const task =
