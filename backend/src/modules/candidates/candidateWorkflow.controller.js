@@ -122,3 +122,89 @@ export const logCall =
 
     return successResponse(res, result, "Call logged");
   });
+
+export const updateEducation =
+  asyncHandler(async (req, res) => {
+    const candidate = await workflowService.updateEducation(
+      req.params.id,
+      req.body,
+      req.user.id,
+      req.user.role
+    );
+
+    return successResponse(res, candidate, "Education updated");
+  });
+
+export const addExperience =
+  asyncHandler(async (req, res) => {
+    const candidate = await workflowService.addExperience(
+      req.params.id,
+      req.body,
+      req.user.id,
+      req.user.role
+    );
+
+    return successResponse(res, candidate, "Experience added");
+  });
+
+export const updateExperience =
+  asyncHandler(async (req, res) => {
+    const candidate = await workflowService.updateExperience(
+      req.params.id,
+      Number(req.params.index),
+      req.body,
+      req.user.id,
+      req.user.role
+    );
+
+    return successResponse(res, candidate, "Experience updated");
+  });
+
+export const deleteExperience =
+  asyncHandler(async (req, res) => {
+    const candidate = await workflowService.deleteExperience(
+      req.params.id,
+      Number(req.params.index),
+      req.user.id,
+      req.user.role
+    );
+
+    return successResponse(res, candidate, "Experience deleted");
+  });
+
+export const addCertification =
+  asyncHandler(async (req, res) => {
+    const candidate = await workflowService.addCertification(
+      req.params.id,
+      req.body,
+      req.user.id,
+      req.user.role
+    );
+
+    return successResponse(res, candidate, "Certification added");
+  });
+
+export const updateCertification =
+  asyncHandler(async (req, res) => {
+    const candidate = await workflowService.updateCertification(
+      req.params.id,
+      Number(req.params.index),
+      req.body,
+      req.user.id,
+      req.user.role
+    );
+
+    return successResponse(res, candidate, "Certification updated");
+  });
+
+export const deleteCertification =
+  asyncHandler(async (req, res) => {
+    const candidate = await workflowService.deleteCertification(
+      req.params.id,
+      Number(req.params.index),
+      req.user.id,
+      req.user.role
+    );
+
+    return successResponse(res, candidate, "Certification deleted");
+  });

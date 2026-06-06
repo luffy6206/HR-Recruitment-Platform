@@ -460,6 +460,397 @@ export const deleteProject =
     return candidate;
   };
 
+const createProfileAuditAndTimeline = async (
+  candidateId,
+  userId,
+  action,
+  field,
+  oldValue,
+  newValue,
+  eventType,
+  title,
+  description,
+  metadata = {}
+) => {
+  await createAuditLog({
+    candidateId,
+    fieldName: field,
+    oldValue,
+    newValue,
+    changedBy: userId,
+    reason: `${title} performed`,
+  });
+
+  await createTimelineEvent({
+    candidateId,
+    eventType,
+    title,
+    description,
+    metadata,
+    performedBy: userId,
+  });
+};
+
+export const updateEducation =
+  async (
+    candidateId,
+    payload,
+    userId,
+    userRole
+  ) => {
+    const candidate = await Candidate.findById(candidateId);
+    if (!candidate) {
+      throw new AppError("Candidate not found", 404);
+    }
+
+    validateCandidateOwnership(candidate, userId, userRole);
+
+    let profile = await CandidateProfile.findOne({ candidateId });
+    if (!profile) {
+      profile = await CandidateProfile.create({ candidateId });
+    }
+
+    const oldEducation = profile.education || [];
+    const newEducation = Array.isArray(payload.education)
+      ? payload.education
+      : payload.education
+      ? [payload.education]
+      : [];
+
+    if (JSON.stringify(oldEducation) !== JSON.stringify(newEducation)) {
+      profile.education = newEducation.map((entry) => ({
+        degree: String(entry.degree || "").trim(),
+        institute: String(entry.institute || "").trim(),
+        year: String(entry.year || "").trim(),
+        cgpa: entry.cgpa !== undefined && entry.cgpa !== null ? Number(entry.cgpa) : undefined,
+      }));
+      await profile.save();
+
+      await createProfileAuditAndTimeline(
+        candidateId,
+        userId,
+        "Updated",
+        "profile.education",
+        oldEducation,
+        profile.education,
+        TIMELINE_EVENTS.EDUCATION_UPDATED,
+        "Education Updated",
+        "Candidate education details were updated",
+        { education: profile.education }
+      );
+    }
+
+    const profileFields = ["passingYear", "candidateType", "academicYear", "cgpa"];
+    for (const field of profileFields) {
+      if (Object.prototype.hasOwnProperty.call(payload, field)) {
+        const oldValue = profile[field];
+        const newValue = payload[field];
+        if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+          profile[field] = field === "cgpa" ? Number(newValue) : newValue;
+          await createAuditLog({
+            candidateId,
+            fieldName: `profile.${field}`,
+            oldValue,
+            newValue,
+            changedBy: userId,
+            reason: `Profile ${field} updated`,
+          });
+        }
+      }
+    }
+
+    await profile.save();
+
+    return candidate;
+  };
+
+export const addExperience =
+  async (
+    candidateId,
+    payload,
+    userId,
+    userRole
+  ) => {
+    const candidate = await Candidate.findById(candidateId);
+    if (!candidate) {
+      throw new AppError("Candidate not found", 404);
+    }
+
+    validateCandidateOwnership(candidate, userId, userRole);
+
+    let profile = await CandidateProfile.findOne({ candidateId });
+    if (!profile) {
+      profile = await CandidateProfile.create({ candidateId });
+    }
+
+    profile.experience = profile.experience || [];
+    const oldValue = profile.experience.map((item) => ({ ...item.toObject?.() ?? item }));
+    const newEntry = {
+      company: String(payload.company || "").trim(),
+      role: String(payload.role || "").trim(),
+      from: String(payload.from || "").trim(),
+      to: String(payload.to || "").trim(),
+      currentCompany: Boolean(payload.currentCompany),
+      description: String(payload.description || "").trim(),
+      experienceType: String(payload.experienceType || "Full Time").trim(),
+    };
+
+    if (!newEntry.company || !newEntry.role) {
+      throw new AppError("Company and role are required", 400);
+    }
+
+    profile.experience.push(newEntry);
+    await profile.save();
+
+    await createProfileAuditAndTimeline(
+      candidateId,
+      userId,
+      "Added",
+      "profile.experience",
+      oldValue,
+      profile.experience,
+      TIMELINE_EVENTS.EXPERIENCE_ADDED,
+      "Experience Added",
+      `Added experience at ${newEntry.company}`,
+      { experience: newEntry, index: profile.experience.length - 1 }
+    );
+
+    return candidate;
+  };
+
+export const updateExperience =
+  async (
+    candidateId,
+    experienceIndex,
+    payload,
+    userId,
+    userRole
+  ) => {
+    const candidate = await Candidate.findById(candidateId);
+    if (!candidate) {
+      throw new AppError("Candidate not found", 404);
+    }
+
+    validateCandidateOwnership(candidate, userId, userRole);
+
+    const profile = await CandidateProfile.findOne({ candidateId });
+    if (!profile || !Array.isArray(profile.experience) || experienceIndex < 0 || experienceIndex >= profile.experience.length) {
+      throw new AppError("Experience not found", 404);
+    }
+
+    const existing = profile.experience[experienceIndex];
+    const oldValue = { ...existing.toObject?.() ?? existing };
+
+    const updatedExperience = {
+      company: payload.company ? String(payload.company).trim() : existing.company,
+      role: payload.role ? String(payload.role).trim() : existing.role,
+      from: payload.from ? String(payload.from).trim() : existing.from,
+      to: payload.to ? String(payload.to).trim() : existing.to,
+      currentCompany: payload.currentCompany !== undefined ? Boolean(payload.currentCompany) : existing.currentCompany,
+      description: payload.description ? String(payload.description).trim() : existing.description,
+      experienceType: payload.experienceType ? String(payload.experienceType).trim() : existing.experienceType,
+    };
+
+    profile.experience[experienceIndex] = updatedExperience;
+    await profile.save();
+
+    await createProfileAuditAndTimeline(
+      candidateId,
+      userId,
+      "Updated",
+      "profile.experience",
+      oldValue,
+      updatedExperience,
+      TIMELINE_EVENTS.EXPERIENCE_UPDATED,
+      "Experience Updated",
+      `Updated experience at ${updatedExperience.company}`,
+      { experience: updatedExperience, index: experienceIndex }
+    );
+
+    return candidate;
+  };
+
+export const deleteExperience =
+  async (
+    candidateId,
+    experienceIndex,
+    userId,
+    userRole
+  ) => {
+    const candidate = await Candidate.findById(candidateId);
+    if (!candidate) {
+      throw new AppError("Candidate not found", 404);
+    }
+
+    validateCandidateOwnership(candidate, userId, userRole);
+
+    const profile = await CandidateProfile.findOne({ candidateId });
+    if (!profile || !Array.isArray(profile.experience) || experienceIndex < 0 || experienceIndex >= profile.experience.length) {
+      throw new AppError("Experience not found", 404);
+    }
+
+    const removed = profile.experience[experienceIndex];
+    const oldValue = profile.experience.map((item) => ({ ...item.toObject?.() ?? item }));
+    profile.experience.splice(experienceIndex, 1);
+    await profile.save();
+
+    await createProfileAuditAndTimeline(
+      candidateId,
+      userId,
+      "Deleted",
+      "profile.experience",
+      oldValue,
+      profile.experience,
+      TIMELINE_EVENTS.EXPERIENCE_DELETED,
+      "Experience Deleted",
+      `Deleted experience entry for ${removed.company}`,
+      { experience: removed, index: experienceIndex }
+    );
+
+    return candidate;
+  };
+
+export const addCertification =
+  async (
+    candidateId,
+    payload,
+    userId,
+    userRole
+  ) => {
+    const candidate = await Candidate.findById(candidateId);
+    if (!candidate) {
+      throw new AppError("Candidate not found", 404);
+    }
+
+    validateCandidateOwnership(candidate, userId, userRole);
+
+    let profile = await CandidateProfile.findOne({ candidateId });
+    if (!profile) {
+      profile = await CandidateProfile.create({ candidateId });
+    }
+
+    profile.certifications = profile.certifications || [];
+    const oldValue = profile.certifications.map((item) => ({ ...item.toObject?.() ?? item }));
+    const newEntry = {
+      name: String(payload.name || "").trim(),
+      issuer: String(payload.issuer || "").trim(),
+      issueDate: payload.issueDate ? String(payload.issueDate).trim() : undefined,
+      expiryDate: payload.expiryDate ? String(payload.expiryDate).trim() : undefined,
+      certificateUrl: payload.certificateUrl ? String(payload.certificateUrl).trim() : undefined,
+    };
+
+    if (!newEntry.name || !newEntry.issuer) {
+      throw new AppError("Certificate name and issuer are required", 400);
+    }
+
+    profile.certifications.push(newEntry);
+    await profile.save();
+
+    await createProfileAuditAndTimeline(
+      candidateId,
+      userId,
+      "Added",
+      "profile.certifications",
+      oldValue,
+      profile.certifications,
+      TIMELINE_EVENTS.CERTIFICATION_ADDED,
+      "Certification Added",
+      `Added certification ${newEntry.name}`,
+      { certification: newEntry, index: profile.certifications.length - 1 }
+    );
+
+    return candidate;
+  };
+
+export const updateCertification =
+  async (
+    candidateId,
+    certificationIndex,
+    payload,
+    userId,
+    userRole
+  ) => {
+    const candidate = await Candidate.findById(candidateId);
+    if (!candidate) {
+      throw new AppError("Candidate not found", 404);
+    }
+
+    validateCandidateOwnership(candidate, userId, userRole);
+
+    const profile = await CandidateProfile.findOne({ candidateId });
+    if (!profile || !Array.isArray(profile.certifications) || certificationIndex < 0 || certificationIndex >= profile.certifications.length) {
+      throw new AppError("Certification not found", 404);
+    }
+
+    const existing = profile.certifications[certificationIndex];
+    const oldValue = { ...existing.toObject?.() ?? existing };
+    const updatedCertification = {
+      name: payload.name ? String(payload.name).trim() : existing.name,
+      issuer: payload.issuer ? String(payload.issuer).trim() : existing.issuer,
+      issueDate: payload.issueDate ? String(payload.issueDate).trim() : existing.issueDate,
+      expiryDate: payload.expiryDate ? String(payload.expiryDate).trim() : existing.expiryDate,
+      certificateUrl: payload.certificateUrl ? String(payload.certificateUrl).trim() : existing.certificateUrl,
+    };
+
+    profile.certifications[certificationIndex] = updatedCertification;
+    await profile.save();
+
+    await createProfileAuditAndTimeline(
+      candidateId,
+      userId,
+      "Updated",
+      "profile.certifications",
+      oldValue,
+      updatedCertification,
+      TIMELINE_EVENTS.CERTIFICATION_UPDATED,
+      "Certification Updated",
+      `Updated certification ${updatedCertification.name}`,
+      { certification: updatedCertification, index: certificationIndex }
+    );
+
+    return candidate;
+  };
+
+export const deleteCertification =
+  async (
+    candidateId,
+    certificationIndex,
+    userId,
+    userRole
+  ) => {
+    const candidate = await Candidate.findById(candidateId);
+    if (!candidate) {
+      throw new AppError("Candidate not found", 404);
+    }
+
+    validateCandidateOwnership(candidate, userId, userRole);
+
+    const profile = await CandidateProfile.findOne({ candidateId });
+    if (!profile || !Array.isArray(profile.certifications) || certificationIndex < 0 || certificationIndex >= profile.certifications.length) {
+      throw new AppError("Certification not found", 404);
+    }
+
+    const removed = profile.certifications[certificationIndex];
+    const oldValue = profile.certifications.map((item) => ({ ...item.toObject?.() ?? item }));
+    profile.certifications.splice(certificationIndex, 1);
+    await profile.save();
+
+    await createProfileAuditAndTimeline(
+      candidateId,
+      userId,
+      "Deleted",
+      "profile.certifications",
+      oldValue,
+      profile.certifications,
+      TIMELINE_EVENTS.CERTIFICATION_DELETED,
+      "Certification Deleted",
+      `Deleted certification ${removed.name}`,
+      { certification: removed, index: certificationIndex }
+    );
+
+    return candidate;
+  };
+
 export const logCall =
   async (
     candidateId,
@@ -525,7 +916,6 @@ export const logCall =
 
     if (outcome === "Answered") {
       if (interested === "Yes") {
-        // Set candidate to LINED_UP status
         candidate.status = CANDIDATE_STATUS.LINED_UP;
 
         auditActions.push({
@@ -541,7 +931,6 @@ export const logCall =
           description: `Candidate expressed interest after ${callNumber === 1 ? "first" : callNumber === 2 ? "second" : "third"} call`,
         });
       } else if (interested === "No") {
-        // Only drop if it's the 3rd call
         if (callNumber === 3) {
           candidate.status = CANDIDATE_STATUS.DROPPED;
           candidate.dropReason = payload.dropReason || "Not Interested";
@@ -558,14 +947,54 @@ export const logCall =
             title: "Candidate Dropped",
             description: candidate.dropReason,
           });
+        } else {
+          const callStatus = callNumber === 1 ? CANDIDATE_STATUS.FIRST_CALL_DONE : callNumber === 2 ? CANDIDATE_STATUS.SECOND_CALL_DONE : CANDIDATE_STATUS.THIRD_CALL_DONE;
+          candidate.status = callStatus;
+
+          auditActions.push({
+            fieldName: "status",
+            oldValue: oldStatus,
+            newValue: callStatus,
+            reason: `Call ${callNumber} completed`,
+          });
+
+          timelineEvents.push({
+            eventType: TIMELINE_EVENTS.CALL_LOGGED,
+            title: `Call ${callNumber} Completed`,
+            description: `Candidate completed the ${callNumber === 1 ? "first" : callNumber === 2 ? "second" : "third"} call`,
+          });
         }
-        // Otherwise, just log the call and keep the candidate in their current status for follow-up attempts
       } else if (interested === "Will Think" || interested === "Will Call Back") {
-        // Log the call without changing status - keep for follow-up
+        const callStatus = callNumber === 1 ? CANDIDATE_STATUS.FIRST_CALL_DONE : callNumber === 2 ? CANDIDATE_STATUS.SECOND_CALL_DONE : CANDIDATE_STATUS.THIRD_CALL_DONE;
+        candidate.status = callStatus;
+
+        auditActions.push({
+          fieldName: "status",
+          oldValue: oldStatus,
+          newValue: callStatus,
+          reason: `Call ${callNumber} completed`,
+        });
+
         timelineEvents.push({
           eventType: TIMELINE_EVENTS.CALL_LOGGED,
-          title: "Follow-up Required",
-          description: `Follow-up needed: ${interested}`,
+          title: `Call ${callNumber} Completed`,
+          description: `Candidate completed the ${callNumber === 1 ? "first" : callNumber === 2 ? "second" : "third"} call and requires follow-up`,
+        });
+      } else {
+        const callStatus = callNumber === 1 ? CANDIDATE_STATUS.FIRST_CALL_DONE : callNumber === 2 ? CANDIDATE_STATUS.SECOND_CALL_DONE : CANDIDATE_STATUS.THIRD_CALL_DONE;
+        candidate.status = callStatus;
+
+        auditActions.push({
+          fieldName: "status",
+          oldValue: oldStatus,
+          newValue: callStatus,
+          reason: `Call ${callNumber} completed`,
+        });
+
+        timelineEvents.push({
+          eventType: TIMELINE_EVENTS.CALL_LOGGED,
+          title: `Call ${callNumber} Completed`,
+          description: `Candidate completed the ${callNumber === 1 ? "first" : callNumber === 2 ? "second" : "third"} call`,
         });
       }
     }

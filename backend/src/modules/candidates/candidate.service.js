@@ -51,7 +51,7 @@ export const createCandidate = async (
   const email = payload.email ? String(payload.email).toLowerCase().trim() : "";
   const phone = payload.phone ? String(payload.phone).trim() : "";
   const category = payload.category ?? "General";
-  const status = payload.status ?? payload.currentStatus ?? "NEW";
+  const status = "NEW";
   const assignedHR = payload.assignedHR ?? null; // Extract assignedHR from payload
 
   const duplicateConditions = [];
@@ -346,7 +346,6 @@ export const updateCandidate = async (
     "phone",
     "category",
     "assignedHR",
-    "status",
     "currentLocation",
     "permanentLocation",
     "technicalTraining",
@@ -354,6 +353,9 @@ export const updateCandidate = async (
     "candidateType",
     "academicYear",
     "cgpa",
+    "education",
+    "experience",
+    "certifications",
   ];
 
   const updates = {};
@@ -362,9 +364,6 @@ export const updateCandidate = async (
     let payloadField = field;
     if (field === "name" && !Object.prototype.hasOwnProperty.call(payload, "name") && Object.prototype.hasOwnProperty.call(payload, "fullName")) {
       payloadField = "fullName";
-    }
-    if (field === "status" && !Object.prototype.hasOwnProperty.call(payload, "status") && Object.prototype.hasOwnProperty.call(payload, "currentStatus")) {
-      payloadField = "currentStatus";
     }
 
     if (Object.prototype.hasOwnProperty.call(payload, payloadField)) {
@@ -394,7 +393,6 @@ export const updateCandidate = async (
     "phone",
     "category",
     "assignedHR",
-    "status",
     "currentAddress",
     "permanentAddress",
     "technicalTraining",
@@ -453,6 +451,29 @@ export const updateCandidate = async (
 
       const oldValue = profile[field];
       const newValue = updates[field];
+      if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+        profile[field] = newValue;
+        await createAuditLog({
+          candidateId: candidate._id,
+          fieldName: `profile.${field}`,
+          oldValue,
+          newValue,
+          changedBy: userId,
+        });
+        profileChangedFields.push(field);
+      }
+    }
+
+    const profileArrayFields = ["education", "experience", "certifications"];
+
+    for (const field of profileArrayFields) {
+      if (!Object.prototype.hasOwnProperty.call(updates, field)) {
+        continue;
+      }
+
+      const oldValue = profile[field] || [];
+      const newValue = Array.isArray(updates[field]) ? updates[field] : [];
+
       if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
         profile[field] = newValue;
         await createAuditLog({

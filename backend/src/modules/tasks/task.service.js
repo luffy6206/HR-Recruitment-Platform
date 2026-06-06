@@ -23,6 +23,7 @@ export const listTasks =
     return Task.find()
       .populate("candidateId", "name email code")
       .populate("assignedBy", "name email")
+      .populate("reviewedBy", "name email")
       .sort({ createdAt: -1 });
   };
 
@@ -30,7 +31,8 @@ export const getTask =
   async (taskId) => {
     const task = await Task.findById(taskId)
       .populate("candidateId", "name email code")
-      .populate("assignedBy", "name email");
+      .populate("assignedBy", "name email")
+      .populate("reviewedBy", "name email");
 
     if (!task) {
       throw new AppError("Task not found", 404);
@@ -132,6 +134,21 @@ export const submitTask =
 
     await task.save();
 
+    await createTimelineEvent({
+      candidateId: task.candidateId,
+      eventType: TIMELINE_EVENTS.TASK_SUBMITTED,
+      title: "Task Submitted",
+      description: `Task submitted: ${task.title}`,
+      performedBy: userId,
+    });
+
+    await createNotification({
+      userId,
+      title: "Task Submitted",
+      message: "Candidate submitted task",
+      type: "TASK",
+    });
+
     await changeCandidateStatus(
       task.candidateId,
       CANDIDATE_STATUS.TASK_REVIEW,
@@ -164,6 +181,9 @@ export const reviewTask =
         400
       );
     }
+
+    task.reviewedBy = userId;
+    task.reviewedAt = new Date();
 
     const { outcome } = payload;
     const oldOutcome = task.reviewOutcome;
@@ -203,6 +223,13 @@ export const reviewTask =
         performedBy: userId,
       });
 
+      await createNotification({
+        userId,
+        title: "Task Reviewed",
+        message: "Task reviewed: candidate selected",
+        type: "TASK",
+      });
+
       return task;
     }
 
@@ -239,6 +266,13 @@ export const reviewTask =
         title: "Task Failed",
         description: `Task review outcome: FAILED — ${payload.reason}`,
         performedBy: userId,
+      });
+
+      await createNotification({
+        userId,
+        title: "Task Reviewed",
+        message: "Task reviewed: candidate failed",
+        type: "TASK",
       });
 
       return task;
@@ -301,7 +335,14 @@ export const reviewTask =
         performedBy: userId,
       });
 
-      return { originalTask: task, reTask };
+      await createNotification({
+        userId,
+        title: "Task Reviewed",
+        message: "Task review outcome: needs improvement — re-task created",
+        type: "TASK",
+      });
+
+      return reTask;
     }
 
     throw new AppError("Invalid outcome", 400);

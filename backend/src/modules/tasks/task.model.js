@@ -79,6 +79,13 @@ const taskSchema =
       // Reason for failure or rework request
       reviewReason: String,
 
+      reviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+
+      reviewedAt: Date,
+
       score: {
         type: Number,
         min: 0,

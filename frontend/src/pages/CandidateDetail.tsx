@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { ArrowLeft, Award, Briefcase, CalendarCheck, ClipboardList, GraduationCap, History, Mail, MapPin, Phone, Sparkles } from "lucide-react";
 import { AppShell } from "@/layouts/AppShell";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,11 +23,11 @@ const computeCandidateType = (passingYear: string | number) => {
 
 const getCandidateTypeBadgeClasses = (candidateType?: string) => {
   if (candidateType === "PASSOUT") {
-    return "inline-flex items-center rounded-full border border-[#22C55E] bg-[#22C55E]/10 px-2 py-0.5 text-[11px] font-semibold uppercase text-[#22C55E]";
+    return "inline-flex items-center rounded-full border border-green-200 bg-green-100 px-2 py-0.5 text-[11px] font-semibold uppercase text-green-800";
   }
 
   if (candidateType === "STUDENT") {
-    return "inline-flex items-center rounded-full border border-[#2563EB] bg-[#2563EB]/10 px-2 py-0.5 text-[11px] font-semibold uppercase text-[#2563EB]";
+    return "inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2 py-0.5 text-[11px] font-semibold uppercase text-blue-800";
   }
 
   return "inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-semibold uppercase text-muted-foreground";
@@ -77,16 +77,17 @@ export default function CandidateDetailsPage() {
   const [evaluateInterviewId, setEvaluateInterviewId] = useState<string | null>(null);
   const [submitTaskId, setSubmitTaskId] = useState<string | null>(null);
   const [reviewTaskId, setReviewTaskId] = useState<string | null>(null);
+  const [completeTaskId, setCompleteTaskId] = useState<string | null>(null);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [taskForm, setTaskForm] = useState({
     title: "",
     description: "",
     startDate: "",
-    dueDate: "",
     endDate: "",
     projectDemoStatus: "PENDING",
     remarks: "",
   });
+  const [completeTaskData, setCompleteTaskData] = useState({ score: 100, reviewNotes: "" });
   
   const [selectedHrId, setSelectedHrId] = useState("");
   const [isScheduleInterviewOpen, setIsScheduleInterviewOpen] = useState(false);
@@ -96,7 +97,7 @@ export default function CandidateDetailsPage() {
   const [evaluateData, setEvaluateData] = useState({ decision: "SELECT", reason: "" });
   const [submitData, setSubmitData] = useState({ submissionLink: "" });
   const [reviewData, setReviewData] = useState({ outcome: "SATISFIED", reviewNotes: "", score: 100, reason: "", newDeadline: "" });
-  const [editData, setEditData] = useState({ name: "", email: "", phone: "", category: "", status: "NEW" });
+  const [editData, setEditData] = useState({ name: "", email: "", phone: "", category: "" });
   const [profileData, setProfileData] = useState({
     passingYear: "",
     candidateType: "",
@@ -112,6 +113,16 @@ export default function CandidateDetailsPage() {
     currentLocation: "",
     permanentLocation: "",
   });
+  const [educationList, setEducationList] = useState<any[]>([]);
+  const [isEducationDialogOpen, setIsEducationDialogOpen] = useState(false);
+  const [editingEducationIndex, setEditingEducationIndex] = useState<number | null>(null);
+  const [educationForm, setEducationForm] = useState({ degree: "", institute: "", year: "", cgpa: "" });
+  const [isExperienceDialogOpen, setIsExperienceDialogOpen] = useState(false);
+  const [editingExperienceIndex, setEditingExperienceIndex] = useState<number | null>(null);
+  const [experienceForm, setExperienceForm] = useState({ company: "", role: "", from: "", to: "", currentCompany: false, description: "", experienceType: "Full Time" });
+  const [isCertificationDialogOpen, setIsCertificationDialogOpen] = useState(false);
+  const [editingCertificationIndex, setEditingCertificationIndex] = useState<number | null>(null);
+  const [certificationForm, setCertificationForm] = useState({ name: "", issuer: "", issueDate: "", expiryDate: "", certificateUrl: "" });
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
   const [editingProjectIndex, setEditingProjectIndex] = useState<number | null>(null);
   const [projectForm, setProjectForm] = useState({ name: "", description: "", type: "Static Project" });
@@ -134,7 +145,6 @@ export default function CandidateDetailsPage() {
         email: data.candidate.email,
         phone: data.candidate.phone,
         category: data.candidate.category,
-        status: data.candidate.status,
       });
     }
   }, [data?.candidate]);
@@ -157,6 +167,8 @@ export default function CandidateDetailsPage() {
         currentLocation: profileDataFromBackend.currentLocation ?? "",
         permanentLocation: profileDataFromBackend.permanentLocation ?? "",
       });
+
+      setEducationList(Array.isArray(profileDataFromBackend.education) ? profileDataFromBackend.education : []);
     }
   }, [data?.profile]);
 
@@ -251,7 +263,6 @@ export default function CandidateDetailsPage() {
         title: "",
         description: "",
         startDate: "",
-        dueDate: "",
         endDate: "",
         projectDemoStatus: "PENDING",
         remarks: "",
@@ -282,6 +293,98 @@ export default function CandidateDetailsPage() {
     },
     onError: (err: any) => {
       toast.error(err?.message ?? "Unable to save profile details");
+    },
+  });
+
+  const updateEducationMutation = useMutation({
+    mutationFn: (data: any) => candidateService.updateEducation(id!, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["candidate", id] });
+      toast.success("Education saved");
+      setIsEducationDialogOpen(false);
+      setEditingEducationIndex(null);
+      setEducationForm({ degree: "", institute: "", year: "", cgpa: "" });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message ?? "Unable to save education");
+    },
+  });
+
+  const addExperienceMutation = useMutation({
+    mutationFn: (experience: any) => candidateService.addExperience(id!, experience),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["candidate", id] });
+      toast.success("Experience added");
+      setIsExperienceDialogOpen(false);
+      setEditingExperienceIndex(null);
+      setExperienceForm({ company: "", role: "", from: "", to: "", currentCompany: false, description: "", experienceType: "Full Time" });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message ?? "Unable to save experience");
+    },
+  });
+
+  const updateExperienceMutation = useMutation({
+    mutationFn: (data: any) => candidateService.updateExperience(id!, data.index, data.experience),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["candidate", id] });
+      toast.success("Experience updated");
+      setIsExperienceDialogOpen(false);
+      setEditingExperienceIndex(null);
+      setExperienceForm({ company: "", role: "", from: "", to: "", currentCompany: false, description: "", experienceType: "Full Time" });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message ?? "Unable to update experience");
+    },
+  });
+
+  const deleteExperienceMutation = useMutation({
+    mutationFn: (index: number) => candidateService.deleteExperience(id!, index),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["candidate", id] });
+      toast.success("Experience deleted");
+    },
+    onError: (err: any) => {
+      toast.error(err?.message ?? "Unable to delete experience");
+    },
+  });
+
+  const addCertificationMutation = useMutation({
+    mutationFn: (certification: any) => candidateService.addCertification(id!, certification),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["candidate", id] });
+      toast.success("Certification added");
+      setIsCertificationDialogOpen(false);
+      setEditingCertificationIndex(null);
+      setCertificationForm({ name: "", issuer: "", issueDate: "", expiryDate: "", certificateUrl: "" });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message ?? "Unable to save certification");
+    },
+  });
+
+  const updateCertificationMutation = useMutation({
+    mutationFn: (data: any) => candidateService.updateCertification(id!, data.index, data.certification),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["candidate", id] });
+      toast.success("Certification updated");
+      setIsCertificationDialogOpen(false);
+      setEditingCertificationIndex(null);
+      setCertificationForm({ name: "", issuer: "", issueDate: "", expiryDate: "", certificateUrl: "" });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message ?? "Unable to update certification");
+    },
+  });
+
+  const deleteCertificationMutation = useMutation({
+    mutationFn: (index: number) => candidateService.deleteCertification(id!, index),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["candidate", id] });
+      toast.success("Certification deleted");
+    },
+    onError: (err: any) => {
+      toast.error(err?.message ?? "Unable to delete certification");
     },
   });
 
@@ -336,6 +439,20 @@ export default function CandidateDetailsPage() {
     },
   });
 
+  const completeTaskMutation = useMutation({
+    mutationFn: (data: any) => taskService.review(completeTaskId!, {
+      outcome: "SATISFIED",
+      score: data.score,
+      reviewNotes: data.reviewNotes,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["candidate", id] });
+      setCompleteTaskId(null);
+      setCompleteTaskData({ score: 100, reviewNotes: "" });
+    },
+  });
+
   if (isLoading) return <div className="grid h-60 place-items-center"><div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
   if (error || !data) return <p className="text-sm text-destructive">Could not load candidate.</p>;
 
@@ -368,14 +485,7 @@ export default function CandidateDetailsPage() {
               <StatusBadge status={candidate?.status} />
             </div>
             <p className="mt-1 text-xs font-mono text-muted-foreground">{candidate?.code ?? "N/A"}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5"><Mail className="size-3.5" />{candidate?.email ?? "—"}</span>
-              <span className="inline-flex items-center gap-1.5"><Phone className="size-3.5" />{candidate?.phone ?? "—"}</span>
-              <span className="inline-flex items-center gap-1.5"><Briefcase className="size-3.5" />{candidate?.category ?? "General"}</span>
-              {profile?.candidateType && (
-                <span className={getCandidateTypeBadgeClasses(profile.candidateType)}>{profile.candidateType}</span>
-              )}
-            </div>
+            {/* Header compact info intentionally left minimal; details shown in info card below */}
           </div>
           <div className="flex flex-col items-end justify-between gap-3 sm:flex-col sm:items-end">
             <div className="flex flex-wrap items-center gap-2">
@@ -411,6 +521,32 @@ export default function CandidateDetailsPage() {
             )}
           </div>
         </div>
+
+          {/* Info bar: white cards with key contact and candidate info */}
+          <div className="mt-4 card-elevated p-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
+              <div className="rounded-lg border border-border bg-background/0 p-3">
+                <p className="text-[13px] font-medium text-[#6B7280]">Email</p>
+                <p className="mt-2 text-[15px] font-bold text-[#111827] truncate">{candidate?.email ?? "—"}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-background/0 p-3">
+                <p className="text-[13px] font-medium text-[#6B7280]">Phone</p>
+                <p className="mt-2 text-[15px] font-bold text-[#111827]">{candidate?.phone ?? "—"}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-background/0 p-3">
+                <p className="text-[13px] font-medium text-[#6B7280]">Category</p>
+                <p className="mt-2 text-[15px] font-bold text-[#111827] truncate">{candidate?.category ?? "—"}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-background/0 p-3">
+                <p className="text-[13px] font-medium text-[#6B7280]">Candidate Type</p>
+                <p className="mt-2 text-[15px] font-bold text-[#111827]">{profile?.candidateType ?? "—"}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-background/0 p-3">
+                <p className="text-[13px] font-medium text-[#6B7280]">Assigned HR</p>
+                <p className="mt-2 text-[15px] font-bold text-[#111827]">{candidate?.assignedTo ?? "—"}</p>
+              </div>
+            </div>
+          </div>
       </div>
 
       <Tabs defaultValue="overview" className="mt-6">
@@ -445,14 +581,24 @@ export default function CandidateDetailsPage() {
                   ],
                 ].map(([k, v]) => (
                   <div key={k as string} className="flex justify-between gap-2">
-                    <dt className="text-muted-foreground">{k}</dt>
-                    <dd className="text-right font-medium text-foreground">{v}</dd>
+                    <dt className="text-[13px] font-medium text-[#6B7280]">{k}</dt>
+                    <dd className="text-right text-[15px] font-bold text-[#111827]">{v}</dd>
                   </div>
                 ))}
               </dl>
             </div>
             <div className="card-elevated p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold text-muted-foreground">Top skills</h3>
+              <div className="flex items-start justify-between">
+                <h3 className="text-sm font-semibold text-muted-foreground">Top skills</h3>
+                {canAddSkill && (
+                  <button
+                    onClick={() => setIsAddSkillOpen(true)}
+                    className="rounded-md border border-border bg-card px-2 py-1 text-xs font-medium hover:bg-muted"
+                  >
+                    Add Skill
+                  </button>
+                )}
+              </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {skills.map((s) => (
                   <span key={s} className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary">
@@ -461,16 +607,6 @@ export default function CandidateDetailsPage() {
                 ))}
                 {skills.length === 0 && <p className="text-xs text-muted-foreground">No skills specified.</p>}
               </div>
-              {canAddSkill && (
-                <div className="mt-4 flex items-center justify-end">
-                  <button
-                    onClick={() => setIsAddSkillOpen(true)}
-                    className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted"
-                  >
-                    Add Skill
-                  </button>
-                </div>
-              )}
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
                   { k: candidateInterviews.length, v: "Interviews" },
@@ -535,7 +671,7 @@ export default function CandidateDetailsPage() {
                   <h3 className="text-sm font-semibold text-muted-foreground">Edit candidate details</h3>
                   <p className="text-xs text-muted-foreground">Update candidate fields and save changes for immediate audit logging.</p>
                 </div>
-                <StatusBadge status={editData.status as any} />
+                <StatusBadge status={candidate?.status} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-2 text-sm">
@@ -573,30 +709,11 @@ export default function CandidateDetailsPage() {
                 </label>
                 <label className="space-y-2 text-sm sm:col-span-2">
                   <span className="font-medium text-foreground">Status</span>
-                  <select
-                    value={editData.status}
-                    onChange={(e) => setEditData((prev) => ({ ...prev, status: e.target.value }))}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-                  >
-                    {[
-                      "NEW",
-                      "AI_PROCESSING",
-                      "AI_PROCESSED",
-                      "FIRST_CALL_PENDING",
-                      "FIRST_CALL_DONE",
-                      "SECOND_CALL_PENDING",
-                      "SECOND_CALL_DONE",
-                      "THIRD_CALL_PENDING",
-                      "INTERVIEW_SCHEDULED",
-                      "INTERVIEW_COMPLETED",
-                      "TASK_ASSIGNED",
-                      "TASK_REVIEW",
-                      "SELECTED",
-                      "DROPPED",
-                    ].map((status) => (
-                      <option key={status} value={status}>{status.replace(/_/g, " ")}</option>
-                    ))}
-                  </select>
+                  <input
+                    value={candidate?.status ?? "NEW"}
+                    disabled
+                    className="w-full rounded-lg border border-input bg-muted/10 px-3 py-2 text-sm text-muted-foreground"
+                  />
                 </label>
               </div>
               <div className="mt-4 flex justify-end gap-2">
@@ -606,7 +723,6 @@ export default function CandidateDetailsPage() {
                     email: candidate?.email ?? "",
                     phone: candidate?.phone ?? "",
                     category: candidate?.category ?? "",
-                    status: candidate?.status ?? "NEW",
                   })}
                   type="button"
                   className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted"
@@ -627,26 +743,130 @@ export default function CandidateDetailsPage() {
 
         <TabsContent value="profile" className="mt-4 space-y-4">
           <ProfileSection icon={<GraduationCap className="size-4" />} title="Education">
-            <ul className="space-y-3">
-              {education.map((e, i) => (
-                <li key={i} className="flex items-start justify-between gap-3 rounded-lg border border-border bg-background/40 p-3 text-sm">
-                  <div>
-                    <p className="font-medium text-foreground">{e.degree}</p>
-                    <p className="text-xs text-muted-foreground">{e.institute}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">Edit the candidate's education history.</p>
+              {canEditCandidate && (
+                <button
+                  onClick={() => {
+                    setEditingEducationIndex(null);
+                    setEducationForm({ degree: "", institute: "", year: "", cgpa: "" });
+                    setIsEducationDialogOpen(true);
+                  }}
+                  className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted"
+                >
+                  Add education
+                </button>
+              )}
+            </div>
+            <ul className="space-y-3 mt-4">
+              {educationList.map((e, i) => (
+                <li key={i} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-foreground">{e.degree}</p>
+                      <p className="text-xs text-muted-foreground">{e.institute}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{e.year}</span>
+                      {canEditCandidate && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditingEducationIndex(i);
+                              setEducationForm({
+                                degree: e.degree ?? "",
+                                institute: e.institute ?? "",
+                                year: e.year ?? "",
+                                cgpa: e.cgpa ?? "",
+                              });
+                              setIsEducationDialogOpen(true);
+                            }}
+                            className="rounded-lg border border-border bg-card px-2 py-1 text-[11px] font-medium hover:bg-muted"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              const updated = educationList.filter((_, idx) => idx !== i);
+                              setEducationList(updated);
+                              updateEducationMutation.mutate({
+                                education: updated,
+                                passingYear: profileData.passingYear ? Number(profileData.passingYear) : undefined,
+                                candidateType: profileData.candidateType || undefined,
+                                academicYear: profileData.candidateType === "STUDENT" ? profileData.academicYear || undefined : undefined,
+                                cgpa: profileData.cgpa ? Number(profileData.cgpa) : undefined,
+                              });
+                            }}
+                            className="rounded-lg border border-destructive bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive hover:bg-destructive/20"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-xs text-muted-foreground">{e.year}</span>
                 </li>
               ))}
-              {education.length === 0 && <p className="text-xs text-muted-foreground p-3">No education details recorded.</p>}
+              {educationList.length === 0 && <p className="text-xs text-muted-foreground p-3">No education details recorded.</p>}
             </ul>
           </ProfileSection>
 
           <ProfileSection icon={<Briefcase className="size-4" />} title="Experience">
-            <ul className="space-y-3">
-              {experience.map((e, i) => (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">Capture professional experience entries.</p>
+              {canEditCandidate && (
+                <button
+                  onClick={() => {
+                    setEditingExperienceIndex(null);
+                    setExperienceForm({ company: "", role: "", from: "", to: "", currentCompany: false, description: "", experienceType: "Full Time" });
+                    setIsExperienceDialogOpen(true);
+                  }}
+                  className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted"
+                >
+                  Add experience
+                </button>
+              )}
+            </div>
+            <ul className="space-y-3 mt-4">
+              {experience.map((e: any, i) => (
                 <li key={i} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
-                  <div className="flex justify-between"><p className="font-medium text-foreground">{e.role}</p><span className="text-xs text-muted-foreground">{e.from} → {e.to}</span></div>
-                  <p className="text-xs text-muted-foreground">{e.company}</p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-foreground">{e.role} at {e.company}</p>
+                      <p className="text-xs text-muted-foreground">{e.description}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{e.from} → {e.to || (e.currentCompany ? "Present" : "—")}</span>
+                      {canEditCandidate && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditingExperienceIndex(i);
+                              setExperienceForm({
+                                company: e.company ?? "",
+                                role: e.role ?? "",
+                                from: e.from ?? "",
+                                to: e.to ?? "",
+                                currentCompany: Boolean(e.currentCompany),
+                                description: e.description ?? "",
+                                experienceType: e.experienceType ?? "Full Time",
+                              });
+                              setIsExperienceDialogOpen(true);
+                            }}
+                            className="rounded-lg border border-border bg-card px-2 py-1 text-[11px] font-medium hover:bg-muted"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteExperienceMutation.mutate(i)}
+                            className="rounded-lg border border-destructive bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive hover:bg-destructive/20"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </li>
               ))}
               {experience.length === 0 && <p className="text-xs text-muted-foreground p-3">No work experience details recorded.</p>}
@@ -916,14 +1136,59 @@ export default function CandidateDetailsPage() {
           </ProfileSection>
 
           <ProfileSection icon={<Award className="size-4" />} title="Certifications">
-            <ul className="space-y-3">
-              {certifications.map((c, i) => (
-                <li key={i} className="flex items-start justify-between gap-3 rounded-lg border border-border bg-background/40 p-3 text-sm">
-                  <div>
-                    <p className="font-medium text-foreground">{c.name}</p>
-                    <p className="text-xs text-muted-foreground">{c.issuer}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">Add or update certification records.</p>
+              {canEditCandidate && (
+                <button
+                  onClick={() => {
+                    setEditingCertificationIndex(null);
+                    setCertificationForm({ name: "", issuer: "", issueDate: "", expiryDate: "", certificateUrl: "" });
+                    setIsCertificationDialogOpen(true);
+                  }}
+                  className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted"
+                >
+                  Add certification
+                </button>
+              )}
+            </div>
+            <ul className="space-y-3 mt-4">
+              {certifications.map((c: any, i) => (
+                <li key={i} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-foreground">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">{c.issuer}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{c.issueDate ?? "—"}</span>
+                      {canEditCandidate && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditingCertificationIndex(i);
+                              setCertificationForm({
+                                name: c.name ?? "",
+                                issuer: c.issuer ?? "",
+                                issueDate: c.issueDate ?? "",
+                                expiryDate: c.expiryDate ?? "",
+                                certificateUrl: c.certificateUrl ?? "",
+                              });
+                              setIsCertificationDialogOpen(true);
+                            }}
+                            className="rounded-lg border border-border bg-card px-2 py-1 text-[11px] font-medium hover:bg-muted"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteCertificationMutation.mutate(i)}
+                            className="rounded-lg border border-destructive bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive hover:bg-destructive/20"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-xs text-muted-foreground">{c.year}</span>
                 </li>
               ))}
               {certifications.length === 0 && <p className="text-xs text-muted-foreground p-3">No certifications recorded.</p>}
@@ -1061,10 +1326,7 @@ export default function CandidateDetailsPage() {
                         <div className="font-medium text-foreground">Assigned by</div>
                         <div>{t.assigneeName}</div>
                       </div>
-                      <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
-                        <div className="font-medium text-foreground">Due date</div>
-                        <div>{t.dueDate ? format(new Date(t.dueDate), "MMM d, yyyy") : "—"}</div>
-                      </div>
+                      {/* Due date removed from task summary */}
                       <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
                         <div className="font-medium text-foreground">Start date</div>
                         <div>{t.startDate ? format(new Date(t.startDate), "MMM d, yyyy") : "—"}</div>
@@ -1096,6 +1358,24 @@ export default function CandidateDetailsPage() {
                           <div>{t.reviewOutcome}</div>
                         </div>
                       )}
+                      {t.score !== undefined && (
+                        <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
+                          <div className="font-medium text-foreground">Score</div>
+                          <div>{t.score}</div>
+                        </div>
+                      )}
+                      {t.reviewedBy && (
+                        <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
+                          <div className="font-medium text-foreground">Reviewed by</div>
+                          <div>{t.reviewedBy}</div>
+                        </div>
+                      )}
+                      {t.reviewedAt && (
+                        <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
+                          <div className="font-medium text-foreground">Reviewed at</div>
+                          <div>{format(new Date(t.reviewedAt), "MMM d, yyyy")}</div>
+                        </div>
+                      )}
                       {typeof t.completed === "boolean" && (
                         <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
                           <div className="font-medium text-foreground">Completed</div>
@@ -1118,9 +1398,14 @@ export default function CandidateDetailsPage() {
                         </button>
                       )}
                       {t.status === "SUBMITTED" && (
-                        <button onClick={() => setReviewTaskId(t.id)} className="rounded-lg gradient-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-glow hover:opacity-95">
-                          Review Task
-                        </button>
+                        <>
+                          <button onClick={() => setCompleteTaskId(t.id)} className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted">
+                            Complete Task
+                          </button>
+                          <button onClick={() => setReviewTaskId(t.id)} className="rounded-lg gradient-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-glow hover:opacity-95">
+                            Review Task
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1168,15 +1453,7 @@ export default function CandidateDetailsPage() {
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </label>
-              <label className="space-y-2 text-sm">
-                <span className="font-medium text-foreground">Due date</span>
-                <input
-                  type="date"
-                  value={taskForm.dueDate}
-                  onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-              </label>
+              {/* Due date removed per new requirements */}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-2 text-sm">
@@ -1219,12 +1496,11 @@ export default function CandidateDetailsPage() {
             >
               Cancel
             </button>
-            <button
+              <button
               onClick={() => createTaskMutation.mutate({
                 candidateId: id!,
                 title: taskForm.title,
                 description: taskForm.description,
-                deadline: taskForm.dueDate ? new Date(taskForm.dueDate).toISOString() : undefined,
                 startDate: taskForm.startDate ? new Date(taskForm.startDate).toISOString() : undefined,
                 endDate: taskForm.endDate ? new Date(taskForm.endDate).toISOString() : undefined,
                 projectDemoStatus: taskForm.projectDemoStatus,
@@ -1374,6 +1650,304 @@ export default function CandidateDetailsPage() {
               className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               {editingProjectIndex !== null ? (updateProjectMutation.isPending ? "Saving..." : "Save changes") : (addProjectMutation.isPending ? "Creating..." : "Create project")}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Education Dialog */}
+      <Dialog open={isEducationDialogOpen} onOpenChange={setIsEducationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingEducationIndex !== null ? "Edit Education" : "Add Education"}</DialogTitle>
+            <DialogDescription>{editingEducationIndex !== null ? "Update education information." : "Add a new education entry."}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-foreground">Degree</span>
+              <input
+                value={educationForm.degree}
+                onChange={(e) => setEducationForm((prev) => ({ ...prev, degree: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="e.g. B.Tech Computer Science"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-foreground">Institute</span>
+              <input
+                value={educationForm.institute}
+                onChange={(e) => setEducationForm((prev) => ({ ...prev, institute: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="e.g. Pune University"
+              />
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2 text-sm">
+                <span className="font-medium text-foreground">Year</span>
+                <input
+                  value={educationForm.year}
+                  onChange={(e) => setEducationForm((prev) => ({ ...prev, year: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="2025"
+                />
+              </label>
+              <label className="space-y-2 text-sm">
+                <span className="font-medium text-foreground">CGPA</span>
+                <input
+                  value={educationForm.cgpa}
+                  onChange={(e) => setEducationForm((prev) => ({ ...prev, cgpa: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="8.5"
+                />
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => {
+                setIsEducationDialogOpen(false);
+                setEditingEducationIndex(null);
+                setEducationForm({ degree: "", institute: "", year: "", cgpa: "" });
+              }}
+              className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                const updatedEducation = [...educationList];
+                const newEntry = {
+                  degree: educationForm.degree,
+                  institute: educationForm.institute,
+                  year: educationForm.year,
+                  cgpa: educationForm.cgpa,
+                };
+                if (editingEducationIndex !== null) {
+                  updatedEducation[editingEducationIndex] = newEntry;
+                } else {
+                  updatedEducation.push(newEntry);
+                }
+                setEducationList(updatedEducation);
+                updateEducationMutation.mutate({
+                  education: updatedEducation,
+                  passingYear: profileData.passingYear ? Number(profileData.passingYear) : undefined,
+                  candidateType: profileData.candidateType || undefined,
+                  academicYear: profileData.candidateType === "STUDENT" ? profileData.academicYear || undefined : undefined,
+                  cgpa: profileData.cgpa ? Number(profileData.cgpa) : undefined,
+                });
+              }}
+              disabled={!educationForm.degree.trim() || !educationForm.institute.trim() || !educationForm.year.trim()}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {editingEducationIndex !== null ? "Save changes" : "Add education"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Experience Dialog */}
+      <Dialog open={isExperienceDialogOpen} onOpenChange={setIsExperienceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingExperienceIndex !== null ? "Edit Experience" : "Add Experience"}</DialogTitle>
+            <DialogDescription>{editingExperienceIndex !== null ? "Update the work experience entry." : "Capture a work experience entry."}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-foreground">Company</span>
+              <input
+                value={experienceForm.company}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, company: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Company name"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-foreground">Role</span>
+              <input
+                value={experienceForm.role}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, role: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Role title"
+              />
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2 text-sm">
+                <span className="font-medium text-foreground">From</span>
+                <input
+                  value={experienceForm.from}
+                  onChange={(e) => setExperienceForm((prev) => ({ ...prev, from: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="Start date or year"
+                />
+              </label>
+              <label className="space-y-2 text-sm">
+                <span className="font-medium text-foreground">To</span>
+                <input
+                  value={experienceForm.to}
+                  onChange={(e) => setExperienceForm((prev) => ({ ...prev, to: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="End date or Present"
+                />
+              </label>
+            </div>
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={experienceForm.currentCompany}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, currentCompany: e.target.checked }))}
+                className="accent-primary"
+              />
+              Currently working here
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-foreground">Description</span>
+              <textarea
+                value={experienceForm.description}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, description: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                rows={4}
+                placeholder="Short summary of responsibilities"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-foreground">Experience type</span>
+              <select
+                value={experienceForm.experienceType}
+                onChange={(e) => setExperienceForm((prev) => ({ ...prev, experienceType: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="Full Time">Full Time</option>
+                <option value="Part Time">Part Time</option>
+                <option value="Internship">Internship</option>
+                <option value="Contract">Contract</option>
+              </select>
+            </label>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => {
+                setIsExperienceDialogOpen(false);
+                setEditingExperienceIndex(null);
+                setExperienceForm({ company: "", role: "", from: "", to: "", currentCompany: false, description: "", experienceType: "Full Time" });
+              }}
+              className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                const experienceData = {
+                  company: experienceForm.company,
+                  role: experienceForm.role,
+                  from: experienceForm.from,
+                  to: experienceForm.to,
+                  currentCompany: experienceForm.currentCompany,
+                  description: experienceForm.description,
+                  experienceType: experienceForm.experienceType,
+                };
+                if (editingExperienceIndex !== null) {
+                  updateExperienceMutation.mutate({ index: editingExperienceIndex, experience: experienceData });
+                } else {
+                  addExperienceMutation.mutate(experienceData);
+                }
+              }}
+              disabled={!experienceForm.company.trim() || !experienceForm.role.trim()}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {editingExperienceIndex !== null ? "Save changes" : "Add experience"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Certification Dialog */}
+      <Dialog open={isCertificationDialogOpen} onOpenChange={setIsCertificationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingCertificationIndex !== null ? "Edit Certification" : "Add Certification"}</DialogTitle>
+            <DialogDescription>{editingCertificationIndex !== null ? "Update certification details." : "Create a new certification record."}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-foreground">Certificate Name</span>
+              <input
+                value={certificationForm.name}
+                onChange={(e) => setCertificationForm((prev) => ({ ...prev, name: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Certificate name"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-foreground">Issuer</span>
+              <input
+                value={certificationForm.issuer}
+                onChange={(e) => setCertificationForm((prev) => ({ ...prev, issuer: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Issuing organization"
+              />
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2 text-sm">
+                <span className="font-medium text-foreground">Issue date</span>
+                <input
+                  type="date"
+                  value={certificationForm.issueDate}
+                  onChange={(e) => setCertificationForm((prev) => ({ ...prev, issueDate: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="space-y-2 text-sm">
+                <span className="font-medium text-foreground">Expiry date</span>
+                <input
+                  type="date"
+                  value={certificationForm.expiryDate}
+                  onChange={(e) => setCertificationForm((prev) => ({ ...prev, expiryDate: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-foreground">Certificate URL</span>
+              <input
+                type="url"
+                value={certificationForm.certificateUrl}
+                onChange={(e) => setCertificationForm((prev) => ({ ...prev, certificateUrl: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Optional link to certificate"
+              />
+            </label>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => {
+                setIsCertificationDialogOpen(false);
+                setEditingCertificationIndex(null);
+                setCertificationForm({ name: "", issuer: "", issueDate: "", expiryDate: "", certificateUrl: "" });
+              }}
+              className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                const certData = {
+                  name: certificationForm.name,
+                  issuer: certificationForm.issuer,
+                  issueDate: certificationForm.issueDate,
+                  expiryDate: certificationForm.expiryDate,
+                  certificateUrl: certificationForm.certificateUrl,
+                };
+                if (editingCertificationIndex !== null) {
+                  updateCertificationMutation.mutate({ index: editingCertificationIndex, certification: certData });
+                } else {
+                  addCertificationMutation.mutate(certData);
+                }
+              }}
+              disabled={!certificationForm.name.trim() || !certificationForm.issuer.trim()}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {editingCertificationIndex !== null ? "Save changes" : "Add certification"}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -1768,11 +2342,59 @@ export default function CandidateDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Complete Task Dialog */}
+      <Dialog open={!!completeTaskId} onOpenChange={(open) => !open && setCompleteTaskId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Complete Task</DialogTitle>
+            <DialogDescription>Record a final score and close this task.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Rating (0-100)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={completeTaskData.score}
+                onChange={(e) => setCompleteTaskData({ ...completeTaskData, score: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Review notes</label>
+              <textarea
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                rows={3}
+                placeholder="Final notes for the candidate"
+                value={completeTaskData.reviewNotes}
+                onChange={(e) => setCompleteTaskData({ ...completeTaskData, reviewNotes: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setCompleteTaskId(null)}
+              className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => completeTaskMutation.mutate(completeTaskData)}
+              disabled={completeTaskMutation.isPending}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {completeTaskMutation.isPending ? "Completing..." : "Mark Complete"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
 
-function ProfileSection({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function ProfileSection({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
     <div className="card-elevated p-5">
       <div className="mb-3 flex items-center gap-2">
