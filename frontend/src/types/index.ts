@@ -104,6 +104,8 @@ export interface Task {
   reviewOutcome?: string;
   reviewNotes?: string;
   reviewReason?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
   score?: number;
   completed?: boolean;
   projectDemoStatus?: string;

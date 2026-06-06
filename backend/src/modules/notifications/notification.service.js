@@ -39,3 +39,8 @@ export const markAsRead =
       }
     );
   };
+
+export const clearNotifications =
+  async (userId) => {
+    return Notification.deleteMany({ userId });
+  };

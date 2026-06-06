@@ -9,11 +9,11 @@ const STATUS_STYLES: Record<CandidateStatus, string> = {
   SECOND_CALL_DONE: "bg-primary/15 text-primary border-primary/30",
   THIRD_CALL_DONE: "bg-primary/15 text-primary border-primary/30",
   LINED_UP: "bg-amber-100 text-amber-800 border-amber-200",
-  INTERVIEW_SCHEDULED: "bg-accent/15 text-accent-foreground border-accent/30",
-  INTERVIEW_COMPLETED: "bg-accent/20 text-accent-foreground border-accent/40",
-  TASK_ASSIGNED: "bg-[oklch(0.78_0.16_78/0.12)] text-[oklch(0.50_0.14_78)] border-[oklch(0.78_0.16_78/0.25)]",
-  TASK_REVIEW: "bg-[oklch(0.78_0.16_78/0.18)] text-[oklch(0.50_0.14_78)] border-[oklch(0.78_0.16_78/0.35)]",
-  SELECTED: "bg-success/10 text-success border-success/20",
+  INTERVIEW_SCHEDULED: "bg-violet-100 text-violet-800 border-violet-200",
+  INTERVIEW_COMPLETED: "bg-violet-100 text-violet-800 border-violet-200",
+  TASK_ASSIGNED: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  TASK_REVIEW: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  SELECTED: "bg-green-100 text-green-800 border-green-200",
   DROPPED: "bg-destructive/10 text-destructive border-destructive/20",
 };
 

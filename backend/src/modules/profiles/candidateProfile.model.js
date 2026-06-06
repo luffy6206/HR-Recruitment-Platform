@@ -18,17 +18,35 @@ const candidateProfileSchema =
 
       github: String,
 
-      education: Array,
+      education: {
+        type: Array,
+        default: [],
+      },
 
-      skills: Array,
+      skills: {
+        type: Array,
+        default: [],
+      },
 
-      inferredSkills: Array,
+      inferredSkills: {
+        type: Array,
+        default: [],
+      },
 
-      experience: Array,
+      experience: {
+        type: Array,
+        default: [],
+      },
 
-      projects: Array,
+      projects: {
+        type: Array,
+        default: [],
+      },
 
-      certifications: Array,
+      certifications: {
+        type: Array,
+        default: [],
+      },
 
       technicalTraining: {
         completed: {

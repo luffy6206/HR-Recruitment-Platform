@@ -69,7 +69,7 @@ const normalizeAudit = (a: any): AuditEntry => ({
     typeof a.changedBy === "object" && a.changedBy !== null
       ? a.changedBy.name ?? "System"
       : a.updatedBy ?? a.changedBy ?? "System",
-  timestamp: a.changedAt ?? a.timestamp ?? "",
+  timestamp: a.changedAt ?? a.createdAt ?? a.timestamp ?? "",
 });
 
 const normalizeInterview = (i: any): Interview => ({
@@ -102,13 +102,19 @@ const normalizeTask = (t: any): Task => ({
   description: t.description ?? undefined,
   status: t.status ?? "ASSIGNED",
   priority: t.priority ?? "MEDIUM",
-  dueDate: t.deadline ?? t.dueDate ?? undefined,
+  // dueDate field removed per new requirements
+  dueDate: undefined,
   startDate: t.startDate ?? undefined,
   endDate: t.endDate ?? undefined,
   submissionLink: t.submissionLink ?? undefined,
   reviewOutcome: t.reviewOutcome ?? undefined,
   reviewNotes: t.reviewNotes ?? undefined,
   reviewReason: t.reviewReason ?? undefined,
+  reviewedBy:
+    typeof t.reviewedBy === "object" && t.reviewedBy !== null
+      ? t.reviewedBy.name ?? undefined
+      : t.reviewedBy ?? undefined,
+  reviewedAt: t.reviewedAt ?? undefined,
   score: t.score ?? undefined,
   completed: t.completed ?? false,
   projectDemoStatus: t.projectDemoStatus ?? undefined,
@@ -279,6 +285,41 @@ export const candidateService = {
     const response = await http.delete(`/candidates/${id}/projects/${index}`);
     return normalizeCandidate(response.data);
   },
+
+  async updateEducation(id: string, data: { education: any[]; passingYear?: number; candidateType?: string; academicYear?: string; cgpa?: number; }): Promise<Candidate> {
+    const response = await http.patch(`/candidates/${id}/education`, data);
+    return normalizeCandidate(response.data);
+  },
+
+  async addExperience(id: string, experience: any): Promise<Candidate> {
+    const response = await http.post(`/candidates/${id}/experience`, experience);
+    return normalizeCandidate(response.data);
+  },
+
+  async updateExperience(id: string, index: number, experience: any): Promise<Candidate> {
+    const response = await http.patch(`/candidates/${id}/experience/${index}`, experience);
+    return normalizeCandidate(response.data);
+  },
+
+  async deleteExperience(id: string, index: number): Promise<Candidate> {
+    const response = await http.delete(`/candidates/${id}/experience/${index}`);
+    return normalizeCandidate(response.data);
+  },
+
+  async addCertification(id: string, certification: any): Promise<Candidate> {
+    const response = await http.post(`/candidates/${id}/certification`, certification);
+    return normalizeCandidate(response.data);
+  },
+
+  async updateCertification(id: string, index: number, certification: any): Promise<Candidate> {
+    const response = await http.patch(`/candidates/${id}/certification/${index}`, certification);
+    return normalizeCandidate(response.data);
+  },
+
+  async deleteCertification(id: string, index: number): Promise<Candidate> {
+    const response = await http.delete(`/candidates/${id}/certification/${index}`);
+    return normalizeCandidate(response.data);
+  },
 };
 
 // ─── Calls ──────────────────────────────────────────────────────────────────
@@ -446,6 +487,10 @@ export const notificationService = {
     const all = await notificationService.list();
     const unread = all.filter((n) => !n.read);
     await Promise.all(unread.map((n) => notificationService.markRead(n.id)));
+  },
+  async clearAll(): Promise<void> {
+    // Call backend endpoint to clear/delete all notifications for the user
+    await http.delete(`/notifications`);
   },
 };
 

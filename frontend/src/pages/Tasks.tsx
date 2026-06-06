@@ -51,7 +51,7 @@ export default function TasksPage() {
                     <p className="text-sm font-medium text-foreground">{t.title}</p>
                     {t.candidateName && <p className="mt-1 text-xs text-muted-foreground">Candidate: {t.candidateName}</p>}
                     <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span>Due {t.dueDate ? format(new Date(t.dueDate), "MMM d") : "—"}</span>
+                      <span>{t.startDate ? `Start ${format(new Date(t.startDate), "MMM d")}` : "—"}</span>
                       <span>{t.assigneeName}</span>
                     </div>
                   </li>

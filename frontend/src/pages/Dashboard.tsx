@@ -184,7 +184,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{t.title}</p>
-                  <p className="text-xs text-muted-foreground">Due {format(new Date(t.dueDate), "MMM d")} • {t.assigneeName}</p>
+                  <p className="text-xs text-muted-foreground">{t.startDate ? `Start ${format(new Date(t.startDate), "MMM d")}` : "—"} • {t.assigneeName}</p>
                 </div>
                 <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">{t.priority}</span>
               </li>

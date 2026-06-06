@@ -7,14 +7,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
 import { notificationService } from "@/services";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
 
 export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { data: notifications = [] } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => notificationService.list(),
   });
+  const markOne = useMutation({
+    mutationFn: (id: string) => notificationService.markRead(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+  const markAll = useMutation({
+    mutationFn: () => notificationService.markAllRead(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+  const clearAll = useMutation({
+    mutationFn: () => notificationService.clearAll(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
   const unread = notifications.filter((n) => !n.read).length;
 
   const initials = user?.name ? user.name.split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("") || "U" : "U";
@@ -41,17 +57,47 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <Link
-          to="/notifications"
-          className="relative grid size-9 place-items-center rounded-lg border border-border bg-card text-foreground/70 transition hover:bg-muted"
-        >
-          <Bell className="size-4" />
-          {unread > 0 && (
-            <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
-              {unread}
-            </span>
-          )}
-        </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="relative grid size-9 place-items-center rounded-lg border border-border bg-card text-foreground/70 transition hover:bg-muted">
+              <Bell className="size-4" />
+              {unread > 0 && (
+                <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
+                  {unread}
+                </span>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-96">
+            <DropdownMenuLabel className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Notifications</div>
+                <div className="text-xs text-muted-foreground">{unread} unread</div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => markAll.mutate()} className="text-xs text-primary underline">Mark all</button>
+                <button onClick={() => clearAll.mutate()} className="text-xs text-destructive underline">Clear all</button>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <div className="max-h-80 overflow-auto">
+              {notifications.length === 0 && (
+                <div className="p-4 text-sm text-muted-foreground">You're all caught up.</div>
+              )}
+              {notifications.map((n) => (
+                <DropdownMenuItem key={n.id} onClick={() => !n.read && markOne.mutate(n.id)} className={n.read ? "opacity-80" : "bg-primary/5"}>
+                  <div className="min-w-0 flex-1 text-left">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium text-foreground">{n.title}</div>
+                      <div className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}</div>
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">{n.body}</div>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

@@ -19,4 +19,10 @@ router.patch(
   controller.markAsRead
 );
 
+router.delete(
+  "/",
+  protect,
+  controller.clearNotifications
+);
+
 export default router;

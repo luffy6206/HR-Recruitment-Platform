@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,13 +13,14 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
-
-
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const redirectTo = new URLSearchParams(location.search).get("redirect") ?? "/dashboard";
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -31,9 +32,10 @@ export default function LoginPage() {
     try {
       await login(values.email, values.password);
       toast.success("Welcome back");
-      navigate("/dashboard");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Login failed");
+      navigate(redirectTo, { replace: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Login failed";
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -62,7 +64,9 @@ export default function LoginPage() {
           </div>
           <div>
             <p className="text-base font-semibold tracking-tight">Talentflow</p>
-            <p className="text-[11px] uppercase tracking-widest text-sidebar-foreground/60">Recruit OS</p>
+            <p className="text-[11px] uppercase tracking-widest text-sidebar-foreground/60">
+              Recruit OS
+            </p>
           </div>
         </div>
 
@@ -80,7 +84,10 @@ export default function LoginPage() {
               { k: "12k+", v: "Candidates managed" },
               { k: "99.9%", v: "Platform uptime" },
             ].map((x) => (
-              <div key={x.k} className="rounded-xl border border-sidebar-border bg-sidebar-accent/30 p-3">
+              <div
+                key={x.k}
+                className="rounded-xl border border-sidebar-border bg-sidebar-accent/30 p-3"
+              >
                 <p className="text-lg font-semibold text-primary">{x.k}</p>
                 <p className="text-[11px] text-sidebar-foreground/60">{x.v}</p>
               </div>
@@ -103,8 +110,12 @@ export default function LoginPage() {
             <p className="text-lg font-semibold">Talentflow</p>
           </div>
 
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Sign in to your workspace</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Enter your credentials to access the recruitment console.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            Sign in to your workspace
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Enter your credentials to access the recruitment console.
+          </p>
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-4">
             <div>
@@ -116,14 +127,18 @@ export default function LoginPage() {
                 placeholder="you@company.com"
               />
               {form.formState.errors.email && (
-                <p className="mt-1 text-xs text-destructive">{form.formState.errors.email.message}</p>
+                <p className="mt-1 text-xs text-destructive">
+                  {form.formState.errors.email.message}
+                </p>
               )}
             </div>
 
             <div>
               <div className="mb-1.5 flex items-center justify-between">
                 <label className="text-sm font-medium text-foreground">Password</label>
-                <a className="text-xs font-medium text-primary hover:underline" href="#">Forgot?</a>
+                <a className="text-xs font-medium text-primary hover:underline" href="#">
+                  Forgot?
+                </a>
               </div>
               <div className="relative">
                 <input
@@ -141,7 +156,9 @@ export default function LoginPage() {
                 </button>
               </div>
               {form.formState.errors.password && (
-                <p className="mt-1 text-xs text-destructive">{form.formState.errors.password.message}</p>
+                <p className="mt-1 text-xs text-destructive">
+                  {form.formState.errors.password.message}
+                </p>
               )}
             </div>
 
@@ -156,13 +173,21 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-8 rounded-xl border border-border bg-card/60 p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Demo accounts</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Demo accounts
+            </p>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button onClick={() => quickFill("ADMIN")} className="rounded-lg border border-border bg-background px-3 py-2 text-left text-xs transition hover:border-primary/40">
+              <button
+                onClick={() => quickFill("ADMIN")}
+                className="rounded-lg border border-border bg-background px-3 py-2 text-left text-xs transition hover:border-primary/40"
+              >
                 <p className="font-semibold text-foreground">Admin</p>
                 <p className="text-muted-foreground">admin@company.com</p>
               </button>
-              <button onClick={() => quickFill("HR")} className="rounded-lg border border-border bg-background px-3 py-2 text-left text-xs transition hover:border-primary/40">
+              <button
+                onClick={() => quickFill("HR")}
+                className="rounded-lg border border-border bg-background px-3 py-2 text-left text-xs transition hover:border-primary/40"
+              >
                 <p className="font-semibold text-foreground">HR</p>
                 <p className="text-muted-foreground">hr@company.com</p>
               </button>
