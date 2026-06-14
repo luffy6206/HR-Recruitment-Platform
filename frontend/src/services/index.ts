@@ -208,7 +208,12 @@ export const dashboardService = {
     return response.data as DashboardStats;
   },
 };
-
+export const searchService = {
+  async global(query: string) {
+    const response = await http.get("/search", { params: { q: query } });
+    return response.data ?? [];
+  },
+};
 // ─── Candidates ─────────────────────────────────────────────────────────────
 
 export const candidateService = {
@@ -483,13 +488,14 @@ export const notificationService = {
   },
 
   async markAllRead(): Promise<void> {
-    // Backend has no bulk mark-read endpoint — mark individually
-    const all = await notificationService.list();
-    const unread = all.filter((n) => !n.read);
-    await Promise.all(unread.map((n) => notificationService.markRead(n.id)));
+    await http.patch(`/notifications/read-all`);
   },
+
+  async delete(id: string): Promise<void> {
+    await http.delete(`/notifications/${id}`);
+  },
+
   async clearAll(): Promise<void> {
-    // Call backend endpoint to clear/delete all notifications for the user
     await http.delete(`/notifications`);
   },
 };

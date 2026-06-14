@@ -19,10 +19,10 @@ import { Link } from "react-router-dom";
 const PIE_COLORS = ["oklch(0.55 0.24 305)", "oklch(0.78 0.16 78)", "oklch(0.65 0.17 240)", "oklch(0.72 0.18 150)", "oklch(0.63 0.23 25)", "oklch(0.6 0.05 280)"];
 
 export default function DashboardPage() {
-  const { data: stats } = useQuery({ queryKey: ["dashboard"], queryFn: () => dashboardService.get() });
-  const { data: candidates = [] } = useQuery({ queryKey: ["candidates"], queryFn: () => candidateService.list() });
-  const { data: interviews = [] } = useQuery({ queryKey: ["interviews"], queryFn: () => interviewService.list() });
-  const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: () => taskService.list() });
+  const { data: stats } = useQuery({ queryKey: ["dashboard"], queryFn: () => dashboardService.get(), refetchInterval: 10000 });
+  const { data: candidates = [] } = useQuery({ queryKey: ["candidates"], queryFn: () => candidateService.list(), refetchInterval: 10000 });
+  const { data: interviews = [] } = useQuery({ queryKey: ["interviews"], queryFn: () => interviewService.list(), refetchInterval: 10000 });
+  const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: () => taskService.list(), refetchInterval: 10000 });
   const { data: reports } = useQuery({ queryKey: ["reports"], queryFn: () => reportService.get() });
 
   const callStatuses = ["FIRST_CALL_PENDING", "FIRST_CALL_DONE", "SECOND_CALL_PENDING", "SECOND_CALL_DONE", "THIRD_CALL_PENDING", "THIRD_CALL_DONE"];

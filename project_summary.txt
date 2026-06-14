@@ -1,4 +1,4 @@
-HR Recruitment Platform - Project Structure
+HR Recruitment Platform - Project Recruitment Structure
 ==========================================
 
 backend

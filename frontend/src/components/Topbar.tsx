@@ -6,20 +6,48 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
-import { notificationService } from "@/services";
+import { notificationService, searchService } from "@/services";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
+import { useEffect, useState } from "react";
 
 export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [searchText, setSearchText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(searchText.trim());
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchText]);
+
+  useEffect(() => {
+    setShowSearchDropdown(Boolean(debouncedSearch));
+  }, [debouncedSearch]);
+
+  const { data: searchResults = [], isFetching: isSearching } = useQuery<any[]>({
+    queryKey: ["search", debouncedSearch],
+    queryFn: () => searchService.global(debouncedSearch),
+    enabled: Boolean(debouncedSearch),
+    staleTime: 10000,
+  });
+
   const { data: notifications = [] } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => notificationService.list(),
+    refetchInterval: 10000,
   });
   const markOne = useMutation({
     mutationFn: (id: string) => notificationService.markRead(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+  const deleteOne = useMutation({
+    mutationFn: (id: string) => notificationService.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
   const markAll = useMutation({
@@ -50,9 +78,42 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="search"
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+            onFocus={() => setShowSearchDropdown(Boolean(searchText.trim()))}
             placeholder="Search candidates, interviews, tasks…"
             className="w-full rounded-lg border border-input bg-card py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
           />
+          {showSearchDropdown && (
+            <div className="absolute left-0 top-full z-50 mt-2 w-full overflow-hidden rounded-3xl border border-border bg-card shadow-xl">
+              {isSearching ? (
+                <div className="p-3 text-sm text-muted-foreground">Searching…</div>
+              ) : searchResults.length === 0 ? (
+                <div className="p-3 text-sm text-muted-foreground">No results found.</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {searchResults.map((result: any) => (
+                    <button
+                      key={`${result.type}-${result.id}`}
+                      onClick={() => {
+                        navigate(result.path);
+                        setSearchText("");
+                        setDebouncedSearch("");
+                        setShowSearchDropdown(false);
+                      }}
+                      className="flex w-full flex-col items-start gap-1 px-3 py-3 text-left transition hover:bg-muted"
+                    >
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        {result.type}
+                      </span>
+                      <span className="text-sm font-medium text-foreground">{result.title}</span>
+                      <span className="text-xs text-muted-foreground">{result.subtitle}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -85,15 +146,40 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
                 <div className="p-4 text-sm text-muted-foreground">You're all caught up.</div>
               )}
               {notifications.map((n) => (
-                <DropdownMenuItem key={n.id} onClick={() => !n.read && markOne.mutate(n.id)} className={n.read ? "opacity-80" : "bg-primary/5"}>
-                  <div className="min-w-0 flex-1 text-left">
-                    <div className="flex items-center justify-between">
+                <div
+                  key={n.id}
+                  className={`flex items-start justify-between gap-3 border-b border-border px-4 py-3 transition ${n.read ? "bg-transparent opacity-90" : "bg-primary/5"}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => !n.read && markOne.mutate(n.id)}
+                    className="min-w-0 text-left"
+                  >
+                    <div className="flex items-center justify-between gap-2">
                       <div className="text-sm font-medium text-foreground">{n.title}</div>
                       <div className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}</div>
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">{n.body}</div>
+                  </button>
+                  <div className="flex flex-col gap-1 text-right">
+                    {!n.read && (
+                      <button
+                        type="button"
+                        onClick={() => markOne.mutate(n.id)}
+                        className="text-[11px] font-semibold text-primary hover:underline"
+                      >
+                        Mark as read
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => deleteOne.mutate(n.id)}
+                      className="text-[11px] font-semibold text-destructive hover:underline"
+                    >
+                      Clear
+                    </button>
                   </div>
-                </DropdownMenuItem>
+                </div>
               ))}
             </div>
           </DropdownMenuContent>
