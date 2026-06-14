@@ -134,7 +134,7 @@ export interface NotificationItem {
   body: string;
   read: boolean;
   createdAt: string;
-  type: "INFO" | "SUCCESS" | "WARNING" | "DANGER";
+  type: "INFO" | "SUCCESS" | "WARNING" | "DANGER" | "ASSIGNMENT" | "SYSTEM";
 }
 
 export interface DashboardStats {

@@ -14,6 +14,8 @@ const ICONS = {
   SUCCESS: { I: CheckCircle2, c: "text-success bg-success/10" },
   WARNING: { I: AlertTriangle, c: "text-accent-foreground bg-accent/20" },
   DANGER: { I: XCircle, c: "text-destructive bg-destructive/10" },
+  ASSIGNMENT: { I: Bell, c: "text-primary bg-primary/10" },
+  SYSTEM: { I: Info, c: "text-muted-foreground bg-muted/20" },
 } as const;
 
 export default function NotificationsPage() {
@@ -25,6 +27,10 @@ export default function NotificationsPage() {
   });
   const markOne = useMutation({
     mutationFn: (id: string) => notificationService.markRead(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+  const deleteOne = useMutation({
+    mutationFn: (id: string) => notificationService.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
@@ -53,21 +59,43 @@ export default function NotificationsPage() {
           {items.map((n) => {
             const { I, c } = ICONS[n.type];
             return (
-              <button
-                key={n.id}
-                onClick={() => !n.read && markOne.mutate(n.id)}
-                className={cn("flex w-full items-start gap-3 p-4 text-left transition hover:bg-muted/30", !n.read && "bg-primary/5")}
-              >
-                <span className={cn("mt-0.5 grid size-9 place-items-center rounded-lg", c)}><I className="size-4" /></span>
-                <div className="min-w-0 flex-1">
+              <div key={n.id} className={cn("flex items-start justify-between gap-3 border-b border-border p-4 transition", !n.read && "bg-primary/5") }>
+                <button
+                  type="button"
+                  onClick={() => !n.read && markOne.mutate(n.id)}
+                  className="min-w-0 flex-1 text-left"
+                >
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">{n.title}</p>
-                    {!n.read && <span className="size-1.5 rounded-full bg-primary" />}
+                    <span className={cn("mt-0.5 grid size-9 place-items-center rounded-lg", c)}><I className="size-4" /></span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">{n.title}</p>
+                        {!n.read && <span className="size-1.5 rounded-full bg-primary" />}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{n.body}</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">{n.body}</p>
+                </button>
+                <div className="flex flex-col items-end gap-2">
+                  {!n.read && (
+                    <button
+                      type="button"
+                      onClick={() => markOne.mutate(n.id)}
+                      className="text-xs font-semibold text-primary hover:underline"
+                    >
+                      Mark as read
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => deleteOne.mutate(n.id)}
+                    className="text-xs font-semibold text-destructive hover:underline"
+                  >
+                    Clear
+                  </button>
+                  <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}</span>
-              </button>
+              </div>
             );
           })}
         </div>
