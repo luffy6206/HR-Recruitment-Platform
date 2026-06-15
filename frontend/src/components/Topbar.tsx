@@ -30,7 +30,13 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
     setShowSearchDropdown(Boolean(debouncedSearch));
   }, [debouncedSearch]);
 
-  const { data: searchResults = [], isFetching: isSearching } = useQuery<any[]>({
+  const { data: searchResults = [], isFetching: isSearching } = useQuery<{
+    id: string;
+    type: string;
+    title: string;
+    subtitle: string;
+    path: string;
+  }[]>({
     queryKey: ["search", debouncedSearch],
     queryFn: () => searchService.global(debouncedSearch),
     enabled: Boolean(debouncedSearch),

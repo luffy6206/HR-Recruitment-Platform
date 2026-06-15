@@ -15,6 +15,8 @@ export const globalSearch =
         { email: { $regex: q, $options: "i" } },
         { phone: { $regex: q, $options: "i" } },
         { category: { $regex: q, $options: "i" } },
+        { code: { $regex: q, $options: "i" } },
+        { candidateCode: { $regex: q, $options: "i" } },
       ];
     }
 

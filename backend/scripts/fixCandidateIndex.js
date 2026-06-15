@@ -19,21 +19,61 @@ async function run() {
     const indexes = await db.collection(collName).indexes();
     console.log(indexes);
 
-    // Attempt to drop existing candidateCode_1 index if present
-    const hasIndex = indexes.find(i => i.name === 'candidateCode_1');
-    if (hasIndex) {
-      console.log('Dropping existing index candidateCode_1');
-      await db.collection(collName).dropIndex('candidateCode_1');
-    } else {
-      console.log('Index candidateCode_1 not found; continuing');
-    }
+    const ensureDroppedIndex = async (name) => {
+      const hasIndex = indexes.find((i) => i.name === name);
+      if (hasIndex) {
+        console.log(`Dropping existing index ${name}`);
+        await db.collection(collName).dropIndex(name);
+      } else {
+        console.log(`Index ${name} not found; continuing`);
+      }
+    };
 
-    // Create a partial unique index that only indexes string candidateCode values
-    // This avoids indexing null values and non-string legacy values
+    await ensureDroppedIndex('candidateCode_1');
+    await ensureDroppedIndex('email_1');
+    await ensureDroppedIndex('phone_1');
+    await ensureDroppedIndex('emailHash_1');
+
     console.log('Creating partial unique index on candidateCode for string values');
     await db.collection(collName).createIndex(
       { candidateCode: 1 },
       { unique: true, partialFilterExpression: { candidateCode: { $type: 'string' } } }
+    );
+
+    console.log('Creating partial unique index on email for active candidates');
+    await db.collection(collName).createIndex(
+      { email: 1 },
+      {
+        unique: true,
+        partialFilterExpression: {
+          isDeleted: false,
+          email: { $type: 'string' },
+        },
+      }
+    );
+
+    console.log('Creating partial unique index on phone for active candidates');
+    await db.collection(collName).createIndex(
+      { phone: 1 },
+      {
+        unique: true,
+        partialFilterExpression: {
+          isDeleted: false,
+          phone: { $type: 'string' },
+        },
+      }
+    );
+
+    console.log('Creating partial unique index on emailHash for active candidates');
+    await db.collection(collName).createIndex(
+      { emailHash: 1 },
+      {
+        unique: true,
+        partialFilterExpression: {
+          isDeleted: false,
+          emailHash: { $type: 'string' },
+        },
+      }
     );
 
     console.log('Index migration complete. Current indexes:');

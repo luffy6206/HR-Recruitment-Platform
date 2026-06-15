@@ -2,6 +2,7 @@ import Candidate from "./candidate.model.js";
 import CandidateProfile from "../profiles/candidateProfile.model.js";
 import CandidateTimeline from "../timelines/candidateTimeline.model.js";
 import CandidateAudit from "../audits/candidateAudit.model.js";
+import User from "../auth/auth.model.js";
 
 import { generateCandidateCode } from "../../shared/services/candidateCode.service.js";
 import { createTimelineEvent } from "../../shared/services/timeline.service.js";
@@ -38,6 +39,25 @@ export const findDuplicateCandidate = async ({ email, phone }) => {
   return Candidate.findOne({
     $or: conditions,
     isDeleted: false,
+  });
+};
+
+export const findDeletedCandidate = async ({ email, phone }) => {
+  const conditions = [];
+  if (email) {
+    conditions.push({ email });
+  }
+  if (phone) {
+    conditions.push({ phone });
+  }
+
+  if (conditions.length === 0) {
+    return null;
+  }
+
+  return Candidate.findOne({
+    $or: conditions,
+    isDeleted: true,
   });
 };
 
@@ -84,12 +104,60 @@ export const createCandidate = async (
     }
   }
 
+  const deletedCandidate = duplicateConditions.length
+    ? await findDeletedCandidate({
+        email: email || undefined,
+        phone: phone || undefined,
+      })
+    : null;
+
   const candidateCode =
     await generateCandidateCode();
 
   let finalCandidateCode = candidateCode;
   if (!finalCandidateCode) {
     finalCandidateCode = `CAN-${new Date().getFullYear()}-TMP-${Date.now()}`;
+  }
+
+  if (deletedCandidate) {
+    console.log('[CANDIDATE] Restoring soft deleted candidate', deletedCandidate._id.toString());
+    deletedCandidate.isDeleted = false;
+    deletedCandidate.deletedAt = undefined;
+    deletedCandidate.deletedBy = undefined;
+    deletedCandidate.name = name;
+    deletedCandidate.email = email || undefined;
+    deletedCandidate.phone = phone || undefined;
+    deletedCandidate.category = category;
+    deletedCandidate.status = status;
+    deletedCandidate.assignedHR = assignedHR || undefined;
+    deletedCandidate.resumeFilePath = payload.resumeFilePath ?? deletedCandidate.resumeFilePath;
+    deletedCandidate.source = payload.source ?? deletedCandidate.source;
+    deletedCandidate.aiAnalysis = payload.aiAnalysis ?? deletedCandidate.aiAnalysis;
+    deletedCandidate.uploadInfo = {
+      uploadedBy: userId,
+      uploadedAt: new Date(),
+    };
+    deletedCandidate.emailHash = payload.emailHash ?? deletedCandidate.emailHash;
+    deletedCandidate.candidateCode = deletedCandidate.candidateCode || finalCandidateCode;
+    deletedCandidate.code = deletedCandidate.code || finalCandidateCode;
+
+    await deletedCandidate.save();
+
+    await CandidateProfile.findOneAndUpdate(
+      { candidateId: deletedCandidate._id },
+      { $setOnInsert: { candidateId: deletedCandidate._id } },
+      { upsert: true }
+    );
+
+    await createTimelineEvent({
+      candidateId: deletedCandidate._id,
+      eventType: TIMELINE_EVENTS.RESUME_UPLOADED,
+      title: "Candidate Restored",
+      description: "Resume uploaded and soft deleted candidate restored.",
+      performedBy: userId,
+    });
+
+    return deletedCandidate;
   }
 
   console.log('[CANDIDATE] Generated candidateCode:', finalCandidateCode);
@@ -185,26 +253,29 @@ export const getCandidates = async (
   }
 
   if (search) {
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = { $regex: escapedSearch, $options: "i" };
+
     filter.$or = [
-      {
-        name: {
-          $regex: search,
-          $options: "i",
-        },
-      },
-      {
-        email: {
-          $regex: search,
-          $options: "i",
-        },
-      },
-      {
-        phone: {
-          $regex: search,
-          $options: "i",
-        },
-      },
+      { name: regex },
+      { email: regex },
+      { phone: regex },
+      { code: regex },
+      { candidateCode: regex },
+      { category: regex },
     ];
+
+    const matchingHrUsers = await User.find({
+      role: "HR",
+      $or: [
+        { name: regex },
+        { email: regex },
+      ],
+    }).select("_id");
+
+    if (matchingHrUsers.length > 0) {
+      filter.$or.push({ assignedHR: { $in: matchingHrUsers.map((user) => user._id) } });
+    }
   }
 
   if (status) {

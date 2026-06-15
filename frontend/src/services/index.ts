@@ -202,16 +202,57 @@ export const userService = {
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
 
+type SearchResultItem = {
+  id: string;
+  type: string;
+  title: string;
+  subtitle: string;
+  path: string;
+};
+
 export const dashboardService = {
   async get(): Promise<DashboardStats> {
     const response = await http.get("/dashboard");
     return response.data as DashboardStats;
   },
 };
+
+const normalizeSearchResult = (result: any): SearchResultItem => {
+  const id = result._id ?? result.id ?? "";
+  const candidateName = result.name ?? result.title ?? "Untitled";
+  const email = result.email ?? "";
+  const phone = result.phone ?? "";
+  const category = result.category ?? "";
+  const code = result.code ?? result.candidateCode ?? "";
+  const candidatePath = id ? `/candidates/${id}` : "/candidates";
+
+  if (result.type === "Interview" || result.type === "Task") {
+    return {
+      id,
+      type: result.type,
+      title: result.title ?? candidateName,
+      subtitle: result.subtitle ?? (result.status ? String(result.status) : email || phone || category || "Untitled"),
+      path: result.path ?? (result.type === "Interview" ? "/interviews" : "/tasks"),
+    };
+  }
+
+  return {
+    id,
+    type: "Candidate",
+    title: candidateName,
+    subtitle: email || phone || code || category || "Candidate",
+    path: candidatePath,
+  };
+};
+
 export const searchService = {
-  async global(query: string) {
+  async global(query: string): Promise<SearchResultItem[]> {
     const response = await http.get("/search", { params: { q: query } });
-    return response.data ?? [];
+    const results = response.data ?? [];
+    if (!Array.isArray(results)) {
+      return [];
+    }
+    return results.map(normalizeSearchResult);
   },
 };
 // ─── Candidates ─────────────────────────────────────────────────────────────
@@ -220,6 +261,28 @@ export const candidateService = {
   async list(): Promise<Candidate[]> {
     const response = await http.get("/candidates");
     return (response.data.candidates ?? []).map(normalizeCandidate);
+  },
+
+  async paginatedList(params?: {
+    search?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    candidates: Candidate[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const response = await http.get("/candidates", { params });
+    const data = response.data ?? {};
+
+    return {
+      candidates: (data.candidates ?? []).map(normalizeCandidate),
+      total: Number(data.total ?? 0),
+      page: Number(data.page ?? params?.page ?? 1),
+      limit: Number(data.limit ?? params?.limit ?? 10),
+    };
   },
 
   async get(id: string): Promise<{
