@@ -266,6 +266,7 @@ export const candidateService = {
   async paginatedList(params?: {
     search?: string;
     status?: string;
+    assignedHR?: string;
     page?: number;
     limit?: number;
   }): Promise<{
