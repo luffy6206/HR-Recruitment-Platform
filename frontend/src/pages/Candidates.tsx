@@ -1,15 +1,15 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Download, FileUp, Filter, Plus, Search, Trash2, UserCog } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileUp, Plus, Search, Trash2, UserCog } from "lucide-react";
 import { toast } from "sonner";
-import { AppShell } from "@/layouts/AppShell";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { candidateService, interviewService } from "@/services";
-import type { Candidate, CandidateStatus } from "@/types";
+import { candidateService, interviewService, userService } from "@/services";
+import type { Candidate, CandidateStatus, User } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -43,6 +43,7 @@ export default function CandidatesPage() {
   const [searchText, setSearchText] = useState("");
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | CandidateStatus>("ALL");
+  const [assignedHRFilter, setAssignedHRFilter] = useState<string>("ALL");
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -56,10 +57,11 @@ export default function CandidatesPage() {
   }, [searchText]);
 
   const { data, isLoading, isFetching } = useQuery<{ candidates: Candidate[]; total: number; page: number; limit: number }, Error>({
-    queryKey: ["candidates", q, statusFilter, page],
+    queryKey: ["candidates", q, statusFilter, assignedHRFilter, page],
     queryFn: () => candidateService.paginatedList({
       search: q || undefined,
       status: statusFilter !== "ALL" ? statusFilter : undefined,
+      assignedHR: assignedHRFilter !== "ALL" ? assignedHRFilter : undefined,
       page,
       limit: pageSize,
     }),
@@ -69,6 +71,38 @@ export default function CandidatesPage() {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const pageData: Candidate[] = candidates;
+
+  const { data: hrUsers = [] } = useQuery<User[]>({
+    queryKey: ["hrUsers"],
+    queryFn: () => userService.listHR(),
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const statusLabelMap: Record<string, string> = {
+    ALL: "All",
+    NEW: "New",
+    AI_PROCESSING: "AI Processing",
+    AI_PROCESSED: "AI Processed",
+    FIRST_CALL_DONE: "First Call Done",
+    SECOND_CALL_DONE: "Second Call Done",
+    THIRD_CALL_DONE: "Third Call Done",
+    LINED_UP: "Lined Up",
+    INTERVIEW_SCHEDULED: "Interview Scheduled",
+    INTERVIEW_COMPLETED: "Interview Completed",
+    TASK_ASSIGNED: "Task Assigned",
+    TASK_REVIEW: "Task Review",
+    SELECTED: "Selected",
+    DROPPED: "Dropped",
+  };
+
+  const assignedHRLabel = useMemo(
+    () => {
+      if (assignedHRFilter === "ALL") return "All HRs";
+      const hr = hrUsers.find((item) => item.id === assignedHRFilter);
+      return hr ? hr.name : "Selected HR";
+    },
+    [assignedHRFilter, hrUsers],
+  );
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
@@ -230,29 +264,61 @@ export default function CandidatesPage() {
             className="w-full rounded-lg border border-input bg-background px-3 py-2 pl-9 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
           />
         </div>
-        <div className="scrollbar-thin -mx-1 flex items-center gap-1 overflow-x-auto px-1">
-          <Filter className="ml-2 mr-1 size-3.5 text-muted-foreground" />
-          {STATUS_FILTERS.map((s) => (
-            <button
-              key={s}
-              onClick={() => { setStatusFilter(s); setPage(1); }}
-              className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${statusFilter === s ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground hover:text-foreground"}`}
-            >
-              {s === "ALL" ? "All" : s.replace("_", " ")}
-            </button>
-          ))}
+
+        <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-[minmax(0,220px)_minmax(0,220px)_auto]">
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value as "ALL" | CandidateStatus);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Status">{statusLabelMap[statusFilter]}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_FILTERS.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {statusLabelMap[status] ?? status.replace(/_/g, " ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={assignedHRFilter}
+            onValueChange={(value) => {
+              setAssignedHRFilter(value);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Assigned HR">{assignedHRLabel}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All HRs</SelectItem>
+              {hrUsers.map((hr) => (
+                <SelectItem key={hr.id} value={hr.id}>
+                  {hr.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSearchText("");
+              setQ("");
+              setStatusFilter("ALL");
+              setAssignedHRFilter("ALL");
+              setPage(1);
+            }}
+            className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+          >
+            Reset
+          </button>
         </div>
-        {statusFilter === "LINED_UP" && selectedCandidateIds.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">{selectedCandidateIds.length} lined-up candidate{selectedCandidateIds.length === 1 ? "" : "s"} selected.</span>
-            <button
-              onClick={() => setIsBulkScheduleOpen(true)}
-              className="rounded-full border border-primary bg-primary/10 px-3 py-1 text-sm font-medium text-primary transition hover:bg-primary/15"
-            >
-              Schedule interview for selected
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Table */}
