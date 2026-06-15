@@ -185,14 +185,30 @@ candidateSchema.index({
   email: 1,
 }, {
   unique: true,
-  sparse: true,
+  partialFilterExpression: {
+    isDeleted: false,
+    email: { $type: "string" },
+  },
 });
 
 candidateSchema.index({
   phone: 1,
 }, {
   unique: true,
+  partialFilterExpression: {
+    isDeleted: false,
+    phone: { $type: "string" },
+  },
+});
+
+candidateSchema.index({
+  emailHash: 1,
+}, {
   sparse: true,
+  partialFilterExpression: {
+    isDeleted: false,
+    emailHash: { $type: "string" },
+  },
 });
 
 candidateSchema.index({

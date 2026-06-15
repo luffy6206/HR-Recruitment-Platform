@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Download, FileUp, Filter, Plus, Search, Trash2, UserCog } from "lucide-react";
 import { toast } from "sonner";
@@ -40,17 +40,40 @@ export default function CandidatesPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
-  const { data: candidates = [], isLoading } = useQuery({ queryKey: ["candidates"], queryFn: () => candidateService.list() });
-
+  const [searchText, setSearchText] = useState("");
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | CandidateStatus>("ALL");
   const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setQ(searchText.trim());
+      setPage(1);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [searchText]);
+
+  const { data, isLoading, isFetching } = useQuery<{ candidates: Candidate[]; total: number; page: number; limit: number }, Error>({
+    queryKey: ["candidates", q, statusFilter, page],
+    queryFn: () => candidateService.paginatedList({
+      search: q || undefined,
+      status: statusFilter !== "ALL" ? statusFilter : undefined,
+      page,
+      limit: pageSize,
+    }),
+  });
+
+  const candidates = data?.candidates ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageData: Candidate[] = candidates;
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
   const [isBulkScheduleOpen, setIsBulkScheduleOpen] = useState(false);
   const [bulkScheduleData, setBulkScheduleData] = useState({ interviewDate: "", interviewTime: "", interviewType: "TECHNICAL" });
-  const pageSize = 10;
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
@@ -102,23 +125,11 @@ export default function CandidatesPage() {
     );
   };
 
-  const filtered = useMemo(() => {
-    return candidates.filter((c) => {
-      if (statusFilter !== "ALL" && c.status !== statusFilter) return false;
-      if (!q || !q.trim()) return true;
-      const s = q.toLowerCase();
-      return (c.name ?? "").toLowerCase().includes(s) || 
-             (c.email ?? "").toLowerCase().includes(s) || 
-             (c.code ?? "").toLowerCase().includes(s);
-    });
-  }, [candidates, q, statusFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageData = filtered.slice((page - 1) * pageSize, page * pageSize);
-
   const selectAllOnPage = () => {
-    const currentPageIds = pageData.filter((c) => c.status === "LINED_UP").map((c) => c.id);
-    const allSelected = currentPageIds.length > 0 && currentPageIds.every((id) => selectedCandidateIds.includes(id));
+    const currentPageIds = candidates
+      .filter((c: Candidate) => c.status === "LINED_UP")
+      .map((c: Candidate) => c.id);
+    const allSelected = currentPageIds.length > 0 && currentPageIds.every((id: string) => selectedCandidateIds.includes(id));
     setSelectedCandidateIds(allSelected ? [] : currentPageIds);
   };
 
@@ -165,8 +176,18 @@ export default function CandidatesPage() {
   });
   function exportCsv() {
     const header = ["Code", "Name", "Email", "Phone", "Category", "Status", "Created"];
-    const rows = filtered.map((c) => [c.code, c.name, c.email, c.phone, c.category, c.status, c.createdAt]);
-    const csv = [header, ...rows].map((r) => r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const rows: Array<string[]> = candidates.map((c: Candidate) => [
+      c.code,
+      c.name,
+      c.email,
+      c.phone,
+      c.category,
+      c.status,
+      c.createdAt,
+    ]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -203,9 +224,9 @@ export default function CandidatesPage() {
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
-            value={q}
-            onChange={(e) => { setQ(e.target.value); setPage(1); }}
-            placeholder="Search by name, email, or code"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder="Search by name, email, phone, code, category, or assigned HR"
             className="w-full rounded-lg border border-input bg-background px-3 py-2 pl-9 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
           />
         </div>
@@ -256,8 +277,11 @@ export default function CandidatesPage() {
               {isLoading && (
                 <tr><td colSpan={9} className="p-10 text-center text-sm text-muted-foreground">Loading candidates…</td></tr>
               )}
-              {!isLoading && pageData.length === 0 && (
-                <tr><td colSpan={9} className="p-10 text-center text-sm text-muted-foreground">No candidates match your filters.</td></tr>
+              {!isLoading && isFetching && pageData.length === 0 && (
+                <tr><td colSpan={9} className="p-10 text-center text-sm text-muted-foreground">Searching…</td></tr>
+              )}
+              {!isLoading && !isFetching && pageData.length === 0 && (
+                <tr><td colSpan={9} className="p-10 text-center text-sm text-muted-foreground">No candidates found.</td></tr>
               )}
               {pageData.map((c) => (
                 <CandidateRow
@@ -283,9 +307,9 @@ export default function CandidatesPage() {
         {/* Pagination */}
         <div className="flex flex-col items-center justify-between gap-3 border-t border-border px-4 py-3 sm:flex-row">
           <p className="text-xs text-muted-foreground">
-            Showing <span className="font-medium text-foreground">{(page - 1) * pageSize + 1}</span>–
-            <span className="font-medium text-foreground">{Math.min(page * pageSize, filtered.length)}</span> of{" "}
-            <span className="font-medium text-foreground">{filtered.length}</span>
+            Showing <span className="font-medium text-foreground">{total === 0 ? 0 : (page - 1) * pageSize + 1}</span>–
+            <span className="font-medium text-foreground">{Math.min(page * pageSize, total)}</span> of{" "}
+            <span className="font-medium text-foreground">{total}</span>
           </p>
           <div className="flex items-center gap-1">
             <button

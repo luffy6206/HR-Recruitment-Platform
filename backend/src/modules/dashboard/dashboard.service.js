@@ -44,14 +44,17 @@ export const getDashboardData =
 
       Candidate.countDocuments({
         status: CANDIDATE_STATUS.FIRST_CALL_PENDING,
+        isDeleted: false,
       }),
 
       Candidate.countDocuments({
         status: CANDIDATE_STATUS.SECOND_CALL_PENDING,
+        isDeleted: false,
       }),
 
       Candidate.countDocuments({
         status: CANDIDATE_STATUS.THIRD_CALL_PENDING,
+        isDeleted: false,
       }),
 
       Call.countDocuments({
@@ -75,10 +78,12 @@ export const getDashboardData =
 
       Candidate.countDocuments({
         status: CANDIDATE_STATUS.SELECTED,
+        isDeleted: false,
       }),
 
       Candidate.countDocuments({
         status: CANDIDATE_STATUS.DROPPED,
+        isDeleted: false,
       }),
     ]);
 
