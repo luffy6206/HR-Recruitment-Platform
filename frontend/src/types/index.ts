@@ -35,6 +35,16 @@ export interface Candidate {
   assignedTo?: string;
   assignedToId?: string;
   candidateType?: "PASSOUT" | "STUDENT";
+  aiAnalysis?: {
+    skills: string[];
+    experienceYears: number;
+    education: string;
+    currentCompany: string;
+    designation: string;
+    location: string;
+    summary: string;
+    resumeScore: number;
+  };
 }
 
 export interface CandidateProfile {
