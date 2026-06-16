@@ -45,6 +45,7 @@ const normalizeCandidate = (candidate: any): Candidate => {
       candidate.candidateType ??
       candidate.profile?.candidateType ??
       undefined,
+    aiAnalysis: candidate.aiAnalysis,
   };
 };
 

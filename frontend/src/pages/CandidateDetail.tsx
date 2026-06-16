@@ -1,8 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
-import { ArrowLeft, Award, Briefcase, CalendarCheck, ClipboardList, GraduationCap, History, Mail, MapPin, Phone, Sparkles } from "lucide-react";
-import { AppShell } from "@/layouts/AppShell";
+import { ArrowLeft, Award, Briefcase, CalendarCheck, Clipboard, ClipboardList, GraduationCap, History, Mail, MapPin, Phone, Sparkles, Check, Copy } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { candidateService, interviewService, taskService, userService, callService } from "@/services";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -453,8 +452,19 @@ export default function CandidateDetailsPage() {
     },
   });
 
-  if (isLoading) return <div className="grid h-60 place-items-center"><div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
-  if (error || !data) return <p className="text-sm text-destructive">Could not load candidate.</p>;
+  const [showAllSkills, setShowAllSkills] = useState(false);
+
+  if (isLoading) return (
+    <div className="flex h-[400px] items-center justify-center">
+      <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+  
+  if (error || !data) return (
+    <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-destructive">
+      Error loading candidate details.
+    </div>
+  );
 
   const { candidate, profile, timeline = [], audits = [] } = data;
   const candidateInterviews = allInterviews.filter((i) => i.candidateId === candidate?.id);
@@ -467,281 +477,202 @@ export default function CandidateDetailsPage() {
   const certifications = profile?.certifications ?? [];
 
   return (
-    <>
-      <Link to={"/candidates" as any} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-4" /> Back to candidates
+    <div className="mx-auto max-w-7xl animate-in fade-in duration-500">
+      <Link to={"/candidates" as any} className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group">
+        <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-1" /> Back to candidates
       </Link>
 
-      {/* Hero */}
-      <div className="card-elevated relative overflow-hidden p-6">
-        <div aria-hidden className="absolute inset-x-0 top-0 h-24 gradient-primary opacity-90" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end">
-          <div className="grid size-20 shrink-0 place-items-center rounded-2xl border-4 border-card bg-card text-xl font-semibold text-primary shadow-elevated">
-            {(candidate?.name ?? "Unknown Candidate").split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("") || "UC"}
+      {/* ATS Style Header */}
+      <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between bg-card p-6 rounded-2xl border shadow-sm">
+        <div className="flex items-center gap-5">
+          <div className="grid size-20 place-items-center rounded-2xl bg-primary/10 text-2xl font-bold text-primary shadow-sm border border-primary/20">
+            {(candidate?.name ?? "UC").split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("")}
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">{candidate?.name ?? "Unknown Candidate"}</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">{candidate?.name}</h1>
               <StatusBadge status={candidate?.status} />
-            </div>
-            <p className="mt-1 text-xs font-mono text-muted-foreground">{candidate?.code ?? "N/A"}</p>
-            {/* Header compact info intentionally left minimal; details shown in info card below */}
-          </div>
-          <div className="flex flex-col items-end justify-between gap-3 sm:flex-col sm:items-end">
-            <div className="flex flex-wrap items-center gap-2">
-              {canAssign && (
-                <button 
-                  onClick={() => setIsAssignOpen(true)}
-                  className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted"
-                >
-                  Assign HR
-                </button>
-              )}
-              {canLogCall && (
-                <button 
-                  onClick={() => setIsCallOpen(true)}
-                  className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted"
-                >
-                  Log Call
-                </button>
-              )}
-              {candidate?.status === "LINED_UP" && (
-                <button 
-                  onClick={() => setIsScheduleInterviewOpen(true)}
-                  className="rounded-lg gradient-primary px-3.5 py-2 text-sm font-medium text-primary-foreground shadow-glow hover:opacity-95"
-                >
-                  Schedule Interview
-                </button>
+              {candidate?.aiAnalysis?.resumeScore && (
+                <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-200">
+                  SCORE: {candidate.aiAnalysis.resumeScore}
+                </span>
               )}
             </div>
-            {candidate?.assignedTo && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Assigned to: <span className="font-medium text-foreground">{candidate.assignedTo}</span>
-              </p>
-            )}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground font-medium">
+              <span className="font-mono text-xs text-muted-foreground/80">{candidate?.code}</span>
+              <span className="flex items-center gap-1.5">
+                <Briefcase className="size-4 text-primary/60" />
+                {candidate?.category}
+              </span>
+              {candidate?.assignedTo && (
+                <span className="flex items-center gap-1.5 rounded-md bg-secondary px-2 py-0.5 text-[11px] font-bold text-secondary-foreground uppercase tracking-wider">
+                  HR: {candidate.assignedTo}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-          {/* Info bar: white cards with key contact and candidate info */}
-          <div className="mt-4 card-elevated p-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
-              <div className="rounded-lg border border-border bg-background/0 p-3">
-                <p className="text-[13px] font-medium text-[#6B7280]">Email</p>
-                <p className="mt-2 text-[15px] font-bold text-[#111827] truncate">{candidate?.email ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-background/0 p-3">
-                <p className="text-[13px] font-medium text-[#6B7280]">Phone</p>
-                <p className="mt-2 text-[15px] font-bold text-[#111827]">{candidate?.phone ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-background/0 p-3">
-                <p className="text-[13px] font-medium text-[#6B7280]">Category</p>
-                <p className="mt-2 text-[15px] font-bold text-[#111827] truncate">{candidate?.category ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-background/0 p-3">
-                <p className="text-[13px] font-medium text-[#6B7280]">Candidate Type</p>
-                <p className="mt-2 text-[15px] font-bold text-[#111827]">{profile?.candidateType ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-background/0 p-3">
-                <p className="text-[13px] font-medium text-[#6B7280]">Assigned HR</p>
-                <p className="mt-2 text-[15px] font-bold text-[#111827]">{candidate?.assignedTo ?? "—"}</p>
-              </div>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {canAssign && (
+            <button 
+              onClick={() => setIsAssignOpen(true)}
+              className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-accent hover:text-accent-foreground transition-all active:scale-[0.98]"
+            >
+              Assign HR
+            </button>
+          )}
+          {canLogCall && (
+            <button 
+              onClick={() => setIsCallOpen(true)}
+              className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-accent hover:text-accent-foreground transition-all active:scale-[0.98]"
+            >
+              Log Call
+            </button>
+          )}
+          {candidate?.status === "LINED_UP" && (
+            <button 
+              onClick={() => setIsScheduleInterviewOpen(true)}
+              className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-md hover:bg-primary/90 transition-all active:scale-[0.98]"
+            >
+              Schedule Interview
+            </button>
+          )}
+        </div>
       </div>
 
-      <Tabs defaultValue="overview" className="mt-6">
-        <TabsList className="bg-card">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-          <TabsTrigger value="audits">Audit Logs</TabsTrigger>
-          <TabsTrigger value="interviews">Interviews</TabsTrigger>
-          <TabsTrigger value="tasks">Tasks</TabsTrigger>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="inline-flex h-12 items-center justify-center rounded-xl bg-muted p-1 text-muted-foreground shadow-inner">
+          <TabsTrigger value="overview" className="rounded-lg px-6 py-2.5 font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Overview</TabsTrigger>
+          <TabsTrigger value="profile" className="rounded-lg px-6 py-2.5 font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Profile</TabsTrigger>
+          <TabsTrigger value="timeline" className="rounded-lg px-6 py-2.5 font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Timeline</TabsTrigger>
+          <TabsTrigger value="audits" className="rounded-lg px-6 py-2.5 font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Audit Logs</TabsTrigger>
+          <TabsTrigger value="interviews" className="rounded-lg px-6 py-2.5 font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Interviews</TabsTrigger>
+          <TabsTrigger value="tasks" className="rounded-lg px-6 py-2.5 font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Tasks</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="mt-4">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <div className="card-elevated p-5">
-              <h3 className="text-sm font-semibold text-muted-foreground">Basic info</h3>
-              <dl className="mt-4 space-y-3 text-sm">
-                {[
-                  ["Candidate code", candidate?.code ?? "N/A"],
-                  ["Full name", candidate?.name ?? "Unknown Candidate"],
-                  ["Email", candidate?.email ?? "—"],
-                  ["Phone", candidate?.phone ?? "—"],
-                  ["Category", candidate?.category ?? "General"],
-                  ["Passing year", profile?.passingYear ?? "—"],
-                  [
-                    "Candidate type",
-                    profile?.candidateType ? (
+        <TabsContent value="overview" className="mt-0 outline-none space-y-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* Left Column: Candidate Info */}
+            <div className="space-y-6 lg:col-span-1">
+              <div className="rounded-2xl border bg-card p-6 shadow-sm">
+                <h3 className="mb-5 text-lg font-bold text-foreground">Contact Information</h3>
+                <div className="space-y-4">
+                  <InfoRow icon={<Mail className="size-4 text-primary/60" />} label="Email" value={candidate?.email} isCopyable />
+                  <InfoRow icon={<Phone className="size-4 text-primary/60" />} label="Phone" value={candidate?.phone} />
+                  <InfoRow icon={<Briefcase className="size-4 text-primary/60" />} label="Category" value={candidate?.category} />
+                  <InfoRow icon={<GraduationCap className="size-4 text-primary/60" />} label="Passing Year" value={profile?.passingYear} />
+                  <InfoRow 
+                    icon={<Award className="size-4 text-primary/60" />} 
+                    label="Candidate Type" 
+                    value={profile?.candidateType ? (
                       <span className={getCandidateTypeBadgeClasses(profile.candidateType)}>{profile.candidateType}</span>
-                    ) : (
-                      "—"
-                    ),
-                  ],
-                ].map(([k, v]) => (
-                  <div key={k as string} className="flex justify-between gap-2">
-                    <dt className="text-[13px] font-medium text-[#6B7280]">{k}</dt>
-                    <dd className="text-right text-[15px] font-bold text-[#111827]">{v}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-            <div className="card-elevated p-5 lg:col-span-2">
-              <div className="flex items-start justify-between">
-                <h3 className="text-sm font-semibold text-muted-foreground">Top skills</h3>
-                {canAddSkill && (
-                  <button
-                    onClick={() => setIsAddSkillOpen(true)}
-                    className="rounded-md border border-border bg-card px-2 py-1 text-xs font-medium hover:bg-muted"
-                  >
-                    Add Skill
-                  </button>
-                )}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {skills.map((s) => (
-                  <span key={s} className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary">
-                    <Sparkles className="size-3" /> {s}
-                  </span>
-                ))}
-                {skills.length === 0 && <p className="text-xs text-muted-foreground">No skills specified.</p>}
-              </div>
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {[
-                  { k: candidateInterviews.length, v: "Interviews" },
-                  { k: candidateTasks.length, v: "Tasks" },
-                  { k: experience.length, v: "Roles" },
-                  { k: certifications.length, v: "Certs" },
-                ].map((x) => (
-                  <div key={x.v} className="rounded-xl border border-border bg-background/40 p-3">
-                    <p className="text-2xl font-semibold text-foreground">{x.k}</p>
-                    <p className="text-xs text-muted-foreground">{x.v}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 mt-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-3xl border border-border bg-background/80 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Candidate type</p>
-              <p className="mt-3 text-lg font-semibold text-foreground">{profile?.candidateType ?? "—"}</p>
-            </div>
-            {profile?.candidateType === "STUDENT" && (
-              <div className="rounded-3xl border border-border bg-background/80 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Academic year</p>
-                <p className="mt-3 text-lg font-semibold text-foreground">{profile?.academicYear ?? "—"}</p>
-              </div>
-            )}
-            <div className="rounded-3xl border border-border bg-background/80 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">CGPA</p>
-              <p className="mt-3 text-lg font-semibold text-foreground">{profile?.cgpa ?? "—"}</p>
-            </div>
-            <div className="rounded-3xl border border-border bg-background/80 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Total projects</p>
-              <p className="mt-3 text-lg font-semibold text-foreground">{projects.length}</p>
-            </div>
-            <div className="rounded-3xl border border-border bg-background/80 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Static projects</p>
-              <p className="mt-3 text-lg font-semibold text-foreground">{projects.filter((p) => p.type?.toLowerCase().includes("static")).length}</p>
-            </div>
-            <div className="rounded-3xl border border-border bg-background/80 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Dynamic projects</p>
-              <p className="mt-3 text-lg font-semibold text-foreground">{projects.filter((p) => p.type?.toLowerCase().includes("dynamic")).length}</p>
-            </div>
-            <div className="rounded-3xl border border-border bg-background/80 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Technical training</p>
-              <p className="mt-3 text-lg font-semibold text-foreground">{profile?.technicalTraining?.completed ? "Completed" : "Not completed"}</p>
-            </div>
-            <div className="rounded-3xl border border-border bg-background/80 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Lined up</p>
-              <p className="mt-3 text-lg font-semibold text-foreground">{candidate?.status === "LINED_UP" ? "Yes" : "No"}</p>
-            </div>
-            <div className="rounded-3xl border border-border bg-background/80 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Current status</p>
-              <p className="mt-3 text-lg font-semibold text-foreground">{candidate?.status ?? "—"}</p>
-            </div>
-          </div>
-
-          {canEditCandidate && (
-            <div className="card-elevated p-5 mt-4">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground">Edit candidate details</h3>
-                  <p className="text-xs text-muted-foreground">Update candidate fields and save changes for immediate audit logging.</p>
+                    ) : "—"} 
+                  />
+                  <InfoRow icon={<History className="size-4 text-primary/60" />} label="Assigned HR" value={candidate?.assignedTo || "Unassigned"} />
                 </div>
-                <StatusBadge status={candidate?.status} />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium text-foreground">Full name</span>
-                  <input
-                    value={editData.name}
-                    onChange={(e) => setEditData((prev) => ({ ...prev, name: e.target.value }))}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-                  />
-                </label>
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium text-foreground">Email</span>
-                  <input
-                    type="email"
-                    value={editData.email}
-                    onChange={(e) => setEditData((prev) => ({ ...prev, email: e.target.value }))}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-                  />
-                </label>
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium text-foreground">Phone</span>
-                  <input
-                    value={editData.phone}
-                    onChange={(e) => setEditData((prev) => ({ ...prev, phone: e.target.value }))}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-                  />
-                </label>
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium text-foreground">Category</span>
-                  <input
-                    value={editData.category}
-                    onChange={(e) => setEditData((prev) => ({ ...prev, category: e.target.value }))}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-                  />
-                </label>
-                <label className="space-y-2 text-sm sm:col-span-2">
-                  <span className="font-medium text-foreground">Status</span>
-                  <input
-                    value={candidate?.status ?? "NEW"}
-                    disabled
-                    className="w-full rounded-lg border border-input bg-muted/10 px-3 py-2 text-sm text-muted-foreground"
-                  />
-                </label>
+
+              {canEditCandidate && (
+                <div className="rounded-2xl border bg-card p-6 shadow-sm">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-foreground">Edit Details</h3>
+                    <StatusBadge status={candidate?.status} />
+                  </div>
+                  <div className="space-y-4">
+                    <label className="block space-y-1.5">
+                      <span className="text-sm font-semibold text-foreground">Full Name</span>
+                      <input
+                        value={editData.name}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, name: e.target.value }))}
+                        className="w-full rounded-xl border border-input bg-background px-3.5 py-2 text-sm shadow-sm transition-all focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                      />
+                    </label>
+                    <label className="block space-y-1.5">
+                      <span className="text-sm font-semibold text-foreground">Email</span>
+                      <input
+                        type="email"
+                        value={editData.email}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, email: e.target.value }))}
+                        className="w-full rounded-xl border border-input bg-background px-3.5 py-2 text-sm shadow-sm transition-all focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                      />
+                    </label>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <button
+                        onClick={() => updateMutation.mutate(editData)}
+                        disabled={updateMutation.isPending}
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.98]"
+                      >
+                        {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Professional Content */}
+            <div className="space-y-6 lg:col-span-2">
+              {/* Professional Summary */}
+              <div className="rounded-2xl border bg-card p-6 shadow-sm overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-4 opacity-5">
+                  <Sparkles className="size-24" />
+                </div>
+                <div className="mb-4 flex items-center gap-2">
+                  <Sparkles className="size-5 text-primary" />
+                  <h3 className="text-lg font-bold text-foreground">Professional Summary</h3>
+                </div>
+                <div className="prose prose-sm max-w-none text-muted-foreground leading-relaxed">
+                  {candidate?.aiAnalysis?.summary || "No summary available for this candidate."}
+                </div>
               </div>
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  onClick={() => setEditData({
-                    name: candidate?.name ?? "",
-                    email: candidate?.email ?? "",
-                    phone: candidate?.phone ?? "",
-                    category: candidate?.category ?? "",
-                  })}
-                  type="button"
-                  className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted"
-                >
-                  Reset
-                </button>
-                <button
-                  onClick={() => updateMutation.mutate(editData)}
-                  disabled={updateMutation.isPending}
-                  className="rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {updateMutation.isPending ? "Saving…" : "Save changes"}
-                </button>
+
+              {/* Skills */}
+              <div className="rounded-2xl border bg-card p-6 shadow-sm">
+                <div className="mb-5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Award className="size-5 text-primary" />
+                    <h3 className="text-lg font-bold text-foreground">Skills & Expertise</h3>
+                  </div>
+                  {canAddSkill && (
+                    <button
+                      onClick={() => setIsAddSkillOpen(true)}
+                      className="rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-bold hover:bg-accent transition-colors"
+                    >
+                      Add Skill
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(showAllSkills ? skills : skills.slice(0, 10)).map((s) => (
+                    <span key={s} className="inline-flex items-center rounded-lg bg-primary/5 px-3 py-1.5 text-sm font-medium text-primary border border-primary/10">
+                      {s}
+                    </span>
+                  ))}
+                  {skills.length > 10 && (
+                    <button 
+                      onClick={() => setShowAllSkills(!showAllSkills)}
+                      className="text-sm font-bold text-primary hover:underline ml-1"
+                    >
+                      {showAllSkills ? "Show less" : `+ ${skills.length - 10} more`}
+                    </button>
+                  )}
+                  {skills.length === 0 && <p className="text-sm text-muted-foreground italic">No skills specified.</p>}
+                </div>
+              </div>
+
+              {/* Key Metrics / Stats */}
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <MetricCard label="Interviews" value={candidateInterviews.length} icon={<CalendarCheck className="size-4" />} />
+                <MetricCard label="Tasks" value={candidateTasks.length} icon={<ClipboardList className="size-4" />} />
+                <MetricCard label="Work Roles" value={experience.length} icon={<Briefcase className="size-4" />} />
+                <MetricCard label="Certifications" value={certifications.length} icon={<Award className="size-4" />} />
               </div>
             </div>
-          )}
+          </div>
         </TabsContent>
 
-        <TabsContent value="profile" className="mt-4 space-y-4">
+        <TabsContent value="profile" className="mt-0 outline-none space-y-6">
           <ProfileSection icon={<GraduationCap className="size-4" />} title="Education">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">Edit the candidate's education history.</p>
@@ -1196,223 +1127,226 @@ export default function CandidateDetailsPage() {
           </ProfileSection>
         </TabsContent>
 
-        <TabsContent value="timeline" className="mt-4">
-          <div className="card-elevated p-6">
-            <ol className="relative space-y-6 border-l-2 border-border pl-6">
+        <TabsContent value="timeline" className="mt-0 outline-none">
+          <div className="rounded-2xl border bg-card p-8 shadow-sm">
+            <ol className="relative space-y-8 border-l-2 border-primary/10 pl-8 ml-2">
               {timeline.map((t) => (
                 <li key={t.id} className="relative">
-                  <span className="absolute -left-[31px] grid size-5 place-items-center rounded-full border-2 border-card bg-primary shadow-sm" />
-                  <p className="text-sm font-semibold text-foreground">{t.title}</p>
-                  {t.description && <p className="mt-0.5 text-xs text-muted-foreground">{t.description}</p>}
-                  <p className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
-                    {t.at ? formatDistanceToNow(new Date(t.at), { addSuffix: true }) : "—"} • {t.by ?? "System"}
-                  </p>
+                  <span className="absolute -left-[41px] grid size-5 place-items-center rounded-full border-4 border-card bg-primary shadow-sm" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-foreground">{t.title}</p>
+                    {t.description && <p className="text-xs text-muted-foreground leading-relaxed">{t.description}</p>}
+                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                      <CalendarCheck className="size-3" />
+                      {t.at ? formatDistanceToNow(new Date(t.at), { addSuffix: true }) : "—"}
+                      <span className="mx-1">•</span>
+                      <span className="text-primary/70">{t.by ?? "System"}</span>
+                    </div>
+                  </div>
                 </li>
               ))}
-              {timeline.length === 0 && <p className="text-xs text-muted-foreground">No timeline events recorded.</p>}
+              {timeline.length === 0 && <p className="text-sm text-muted-foreground italic">No timeline events recorded.</p>}
             </ol>
           </div>
         </TabsContent>
 
-        <TabsContent value="audits" className="mt-4">
-          <div className="card-elevated overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40 text-left">
-                  {["Field", "Old value", "New value", "Updated by", "Timestamp"].map((h) => (
-                    <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{h}</th>
+        <TabsContent value="audits" className="mt-0 outline-none">
+          <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/30 text-left">
+                    {["Field", "Old Value", "New Value", "Updated By", "Timestamp"].map((h) => (
+                      <th key={h} className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {audits.map((a) => (
+                    <tr key={a.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-6 py-4 font-bold text-foreground">{a.field}</td>
+                      <td className="px-6 py-4 text-muted-foreground">{a.oldValue}</td>
+                      <td className="px-6 py-4 text-foreground font-medium">{a.newValue}</td>
+                      <td className="px-6 py-4 text-muted-foreground">{a.updatedBy}</td>
+                      <td className="px-6 py-4 text-xs text-muted-foreground/70 whitespace-nowrap">
+                        {a.timestamp ? format(new Date(a.timestamp), "MMM d, yyyy • p") : "—"}
+                      </td>
+                    </tr>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {audits.map((a) => (
-                  <tr key={a.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3 font-medium text-foreground">{a.field}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{a.oldValue}</td>
-                    <td className="px-4 py-3 text-foreground">{a.newValue}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{a.updatedBy}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{a.timestamp ? format(new Date(a.timestamp), "MMM d, yyyy p") : "—"}</td>
-                  </tr>
-                ))}
-                {audits.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="p-6 text-center text-xs text-muted-foreground">No audit logs available.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  {audits.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-sm text-muted-foreground italic">No audit logs available.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="interviews" className="mt-4">
-          <div className="card-elevated divide-y divide-border">
-            {candidateInterviews.length === 0 && <p className="p-6 text-sm text-muted-foreground">No interviews yet.</p>}
+        <TabsContent value="interviews" className="mt-0 outline-none">
+          <div className="grid gap-4">
+            {candidateInterviews.length === 0 && (
+              <div className="rounded-2xl border border-dashed bg-muted/20 p-12 text-center">
+                <CalendarCheck className="mx-auto size-12 text-muted-foreground/20 mb-4" />
+                <p className="text-sm text-muted-foreground font-medium">No interviews scheduled yet.</p>
+              </div>
+            )}
             {candidateInterviews.map((i) => (
-              <div key={i.id} className="flex items-center justify-between gap-3 p-4">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><CalendarCheck className="size-4" /></div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground">{i.interviewType} interview with {i.interviewerName}</p>
-                    <p className="text-xs text-muted-foreground">{i.scheduledAt ? format(new Date(i.scheduledAt), "EEEE, MMM d • p") : "—"}</p>
+              <div key={i.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border bg-card shadow-sm hover:border-primary/20 transition-all group">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <CalendarCheck className="size-5" />
                   </div>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs mr-4">{i.status}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-3">
+                      <p className="text-base font-bold text-foreground">{i.interviewType} Interview</p>
+                      <span className="rounded-full bg-secondary/50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-secondary-foreground">{i.status}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-0.5 font-medium">with <span className="text-foreground">{i.interviewerName}</span></p>
+                    <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
+                      <History className="size-3.5" />
+                      {i.scheduledAt ? format(new Date(i.scheduledAt), "EEEE, MMM d • p") : "—"}
+                    </p>
+                  </div>
                 </div>
-                {i.status === "SCHEDULED" && (
-                  <button onClick={() => setCompleteInterviewId(i.id)} className="shrink-0 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted">
-                    Complete
-                  </button>
-                )}
-                {i.status === "COMPLETED" && (
-                  <button onClick={() => setEvaluateInterviewId(i.id)} className="shrink-0 rounded-lg gradient-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-glow hover:opacity-95">
-                    Evaluate
-                  </button>
-                )}
+                <div className="flex items-center gap-2 sm:self-center">
+                  {i.status === "SCHEDULED" && (
+                    <button 
+                      onClick={() => setCompleteInterviewId(i.id)} 
+                      className="inline-flex h-9 items-center justify-center rounded-lg border border-input bg-background px-4 text-xs font-bold shadow-sm hover:bg-accent hover:text-accent-foreground transition-all active:scale-95"
+                    >
+                      Complete
+                    </button>
+                  )}
+                  {i.status === "COMPLETED" && (
+                    <button 
+                      onClick={() => setEvaluateInterviewId(i.id)} 
+                      className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all active:scale-95"
+                    >
+                      Evaluate
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </TabsContent>
 
-        <TabsContent value="tasks" className="mt-4">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-muted-foreground">Task management</h2>
-                <p className="text-xs text-muted-foreground">Assign tasks, review submissions, and track completion for this candidate.</p>
+        <TabsContent value="tasks" className="mt-0 outline-none space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-foreground tracking-tight">Task Management</h2>
+              <p className="text-sm text-muted-foreground font-medium">Assign, track, and review technical assessments.</p>
+            </div>
+            {canEditCandidate && (
+              <button
+                onClick={() => setIsTaskDialogOpen(true)}
+                className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-md hover:bg-primary/90 transition-all active:scale-[0.98]"
+              >
+                Assign New Task
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              { label: "Assigned", value: candidateTasks.filter((t) => t.status === "ASSIGNED").length, color: "bg-blue-500" },
+              { label: "Submitted", value: candidateTasks.filter((t) => t.status === "SUBMITTED").length, color: "bg-amber-500" },
+              { label: "Reviewed", value: candidateTasks.filter((t) => t.status === "REVIEWED").length, color: "bg-purple-500" },
+              { label: "Passed", value: candidateTasks.filter((t) => t.status === "PASSED").length, color: "bg-green-500" },
+              { label: "Failed", value: candidateTasks.filter((t) => t.status === "FAILED").length, color: "bg-red-500" },
+              { label: "Total", value: candidateTasks.length, color: "bg-primary" },
+            ].map((item) => (
+              <div key={item.label} className="rounded-2xl border bg-card p-4 shadow-sm relative overflow-hidden group">
+                <div className={`absolute top-0 left-0 w-1 h-full ${item.color} opacity-20`} />
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{item.label}</p>
+                <p className="mt-1 text-2xl font-black text-foreground">{item.value}</p>
               </div>
-              {canEditCandidate && (
-                <button
-                  onClick={() => setIsTaskDialogOpen(true)}
-                  className="rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                >
-                  Assign Task
-                </button>
-              )}
+            ))}
+          </div>
+
+          {candidateTasks.length === 0 ? (
+            <div className="rounded-2xl border border-dashed bg-muted/20 p-12 text-center">
+              <ClipboardList className="mx-auto size-12 text-muted-foreground/20 mb-4" />
+              <p className="text-sm text-muted-foreground font-medium">No tasks assigned for this candidate yet.</p>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {[
-                { label: "Assigned", value: candidateTasks.filter((t) => t.status === "ASSIGNED").length },
-                { label: "Submitted", value: candidateTasks.filter((t) => t.status === "SUBMITTED").length },
-                { label: "Reviewed", value: candidateTasks.filter((t) => t.status === "REVIEWED").length },
-                { label: "Passed", value: candidateTasks.filter((t) => t.status === "PASSED").length },
-                { label: "Failed", value: candidateTasks.filter((t) => t.status === "FAILED").length },
-                { label: "Completed", value: candidateTasks.filter((t) => t.completed).length },
-              ].map((item) => (
-                <div key={item.label} className="rounded-3xl border border-border bg-background/80 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{item.label}</p>
-                  <p className="mt-3 text-lg font-semibold text-foreground">{item.value}</p>
-                </div>
-              ))}
-            </div>
-
-            {candidateTasks.length === 0 ? (
-              <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground">No tasks for this candidate yet.</div>
-            ) : (
-              <div className="grid gap-4">
-                {candidateTasks.map((t) => (
-                  <div key={t.id} className="rounded-3xl border border-border bg-background/80 p-5 shadow-sm">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground">{t.title}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{t.description ?? "No description provided."}</p>
+          ) : (
+            <div className="grid gap-6">
+              {candidateTasks.map((t) => (
+                <div key={t.id} className="rounded-2xl border bg-card p-6 shadow-sm hover:border-primary/20 transition-all relative overflow-hidden">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <p className="text-lg font-bold text-foreground">{t.title}</p>
+                        <span className="rounded-full bg-secondary/50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-secondary-foreground">{t.status}</span>
                       </div>
-                      <span className="inline-flex rounded-full border border-border bg-muted px-3 py-1 text-[11px] font-semibold uppercase text-muted-foreground">
-                        {t.status}
-                      </span>
+                      <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">{t.description ?? "No description provided."}</p>
                     </div>
-
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
-                        <div className="font-medium text-foreground">Assigned by</div>
-                        <div>{t.assigneeName}</div>
-                      </div>
-                      {/* Due date removed from task summary */}
-                      <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
-                        <div className="font-medium text-foreground">Start date</div>
-                        <div>{t.startDate ? format(new Date(t.startDate), "MMM d, yyyy") : "—"}</div>
-                      </div>
-                      <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
-                        <div className="font-medium text-foreground">End date</div>
-                        <div>{t.endDate ? format(new Date(t.endDate), "MMM d, yyyy") : "—"}</div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {t.submissionLink && (
-                        <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
-                          <div className="font-medium text-foreground">Submission</div>
-                          <a href={t.submissionLink} target="_blank" rel="noreferrer" className="text-primary underline">
-                            View work
-                          </a>
-                        </div>
-                      )}
-                      {t.projectDemoStatus && (
-                        <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
-                          <div className="font-medium text-foreground">Demo status</div>
-                          <div>{t.projectDemoStatus}</div>
-                        </div>
-                      )}
-                      {t.reviewOutcome && (
-                        <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
-                          <div className="font-medium text-foreground">Review outcome</div>
-                          <div>{t.reviewOutcome}</div>
-                        </div>
-                      )}
-                      {t.score !== undefined && (
-                        <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
-                          <div className="font-medium text-foreground">Score</div>
-                          <div>{t.score}</div>
-                        </div>
-                      )}
-                      {t.reviewedBy && (
-                        <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
-                          <div className="font-medium text-foreground">Reviewed by</div>
-                          <div>{t.reviewedBy}</div>
-                        </div>
-                      )}
-                      {t.reviewedAt && (
-                        <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
-                          <div className="font-medium text-foreground">Reviewed at</div>
-                          <div>{format(new Date(t.reviewedAt), "MMM d, yyyy")}</div>
-                        </div>
-                      )}
-                      {typeof t.completed === "boolean" && (
-                        <div className="rounded-2xl bg-card p-3 text-xs text-muted-foreground">
-                          <div className="font-medium text-foreground">Completed</div>
-                          <div>{t.completed ? "Yes" : "No"}</div>
-                        </div>
-                      )}
-                    </div>
-
-                    {t.remarks && (
-                      <div className="mt-4 rounded-3xl border border-border bg-card p-3 text-sm text-muted-foreground">
-                        <div className="font-medium text-foreground">Remarks</div>
-                        <p>{t.remarks}</p>
-                      </div>
-                    )}
-
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2">
                       {t.status === "ASSIGNED" && (
-                        <button onClick={() => setSubmitTaskId(t.id)} className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted">
+                        <button onClick={() => setSubmitTaskId(t.id)} className="inline-flex h-9 items-center justify-center rounded-lg border border-input bg-background px-4 text-xs font-bold shadow-sm hover:bg-accent transition-all active:scale-95">
                           Submit Link
                         </button>
                       )}
                       {t.status === "SUBMITTED" && (
                         <>
-                          <button onClick={() => setCompleteTaskId(t.id)} className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted">
-                            Complete Task
+                          <button onClick={() => setCompleteTaskId(t.id)} className="inline-flex h-9 items-center justify-center rounded-lg border border-input bg-background px-4 text-xs font-bold shadow-sm hover:bg-accent transition-all active:scale-95">
+                            Mark Complete
                           </button>
-                          <button onClick={() => setReviewTaskId(t.id)} className="rounded-lg gradient-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-glow hover:opacity-95">
-                            Review Task
+                          <button onClick={() => setReviewTaskId(t.id)} className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all active:scale-95">
+                            Review & Score
                           </button>
                         </>
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+
+                  <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Assigned By</p>
+                      <p className="text-sm font-semibold text-foreground">{t.assigneeName}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Start Date</p>
+                      <p className="text-sm font-semibold text-foreground">{t.startDate ? format(new Date(t.startDate), "MMM d, yyyy") : "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">End Date</p>
+                      <p className="text-sm font-semibold text-foreground">{t.endDate ? format(new Date(t.endDate), "MMM d, yyyy") : "—"}</p>
+                    </div>
+                    {t.submissionLink && (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Work Link</p>
+                        <a href={t.submissionLink} target="_blank" rel="noreferrer" className="text-sm font-bold text-primary hover:underline flex items-center gap-1.5">
+                          View Submission <Copy className="size-3" />
+                        </a>
+                      </div>
+                    )}
+                    {t.score !== undefined && (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Score</p>
+                        <p className="text-sm font-bold text-foreground">{t.score} / 100</p>
+                      </div>
+                    )}
+                    {t.reviewedBy && (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Reviewed By</p>
+                        <p className="text-sm font-semibold text-foreground">{t.reviewedBy}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {t.remarks && (
+                    <div className="mt-6 p-4 rounded-xl bg-muted/30 border border-dashed border-border text-sm text-muted-foreground leading-relaxed italic">
+                      <span className="font-bold text-foreground/80 not-italic block mb-1 text-[10px] uppercase tracking-wider">Internal Remarks</span>
+                      "{t.remarks}"
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -2390,18 +2324,80 @@ export default function CandidateDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
 
 function ProfileSection({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
-    <div className="card-elevated p-5">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="grid size-7 place-items-center rounded-md bg-primary/10 text-primary">{icon}</span>
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+    <div className="rounded-2xl border bg-card p-6 shadow-sm">
+      <div className="mb-5 flex items-center gap-2">
+        <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">{icon}</span>
+        <h3 className="text-lg font-bold text-foreground">{title}</h3>
       </div>
       {children}
+    </div>
+  );
+}
+
+function InfoRow({ 
+  icon, 
+  label, 
+  value, 
+  isCopyable = false 
+}: { 
+  icon: ReactNode; 
+  label: string; 
+  value: string | number | ReactNode; 
+  isCopyable?: boolean 
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (typeof value === 'string') {
+      navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success(`${label} copied to clipboard`);
+    }
+  };
+
+  return (
+    <div className="flex items-start justify-between gap-4 group">
+      <div className="flex items-start gap-3 min-w-0">
+        <div className="mt-1 flex-shrink-0">{icon}</div>
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{label}</p>
+          <div className="mt-0.5 flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground truncate block">
+              {value || "—"}
+            </span>
+            {isCopyable && value && typeof value === 'string' && (
+              <button 
+                onClick={handleCopy}
+                className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-muted transition-all"
+                title={`Copy ${label}`}
+              >
+                {copied ? <Check className="size-3 text-green-500" /> : <Copy className="size-3 text-muted-foreground" />}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, icon }: { label: string; value: number | string; icon: ReactNode }) {
+  return (
+    <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:shadow-md hover:border-primary/20 group">
+      <div className="flex items-center justify-between mb-3">
+        <div className="grid size-8 place-items-center rounded-lg bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+          {icon}
+        </div>
+        <span className="text-2xl font-black text-foreground">{value}</span>
+      </div>
+      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
     </div>
   );
 }
