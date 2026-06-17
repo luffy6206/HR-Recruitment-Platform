@@ -1,10 +1,13 @@
 import "dotenv/config";
+import { createServer } from "http";
 
 import app from "./app.js";
 import connectDB from "./config/database.js";
 import { seedDemoUsers } from "./scripts/createAdmin.js";
+import { socketService } from "./shared/services/socket.service.js";
 
 const PORT = process.env.PORT || 5000;
+const httpServer = createServer(app);
 
 const startServer = async () => {
   try {
@@ -14,7 +17,9 @@ const startServer = async () => {
       await seedDemoUsers();
     }
 
-    app.listen(PORT, () => {
+    socketService.init(httpServer);
+
+    httpServer.listen(PORT, () => {
       console.log(
         `Server running on port ${PORT}`
       );

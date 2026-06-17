@@ -29,9 +29,6 @@ export const uploadResume =
         originalFileName:
           file.originalname,
 
-        fileUrl:
-          `/uploads/${file.originalname}`,
-
         fileSize:
           file.size,
 

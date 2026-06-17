@@ -78,14 +78,14 @@ export const assignCandidate =
         userId,
     });
 
+    const performer = await User.findById(userId);
     await createNotification({
       userId: hrId,
 
       title:
         "Candidate Assigned",
 
-      message:
-        "A new candidate has been assigned to you",
+      message: `${candidate.name} assigned to you by ${performer?.name || "System Admin"}`,
 
       type:
         "ASSIGNMENT",

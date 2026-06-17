@@ -2,7 +2,7 @@ import asyncHandler from "../../shared/utils/asyncHandler.js";
 import { successResponse, errorResponse } from "../../shared/response/apiResponse.js";
 import AppError from "../../shared/errors/AppError.js";
 import { resumeParserService } from "../../services/resumeParser.service.js";
-import { openaiResumeAnalyzerService } from "../../services/openaiResumeAnalyzer.service.js";
+import { fallbackParseResume } from "../../services/resumeFallbackParser.js";
 import { createCandidate, findDuplicateCandidate } from "./candidate.service.js";
 import crypto from "crypto";
 import fs from "fs/promises";
@@ -10,7 +10,7 @@ import path from "path";
 import { updateProfileFromResume } from "../ai/profileUpdater.service.js";
 /**
  * Upload and process multiple resume files
- * Extracts text, analyzes with Gemini, creates candidates
+ * Extracts text, parses with regex, creates candidates
  */
 export const uploadResumes = asyncHandler(async (req, res) => {
   console.log("[UPLOAD] Upload request received");
@@ -64,8 +64,6 @@ export const uploadResumes = asyncHandler(async (req, res) => {
     throw new AppError("No files provided", 400);
   }
 
-  await resumeParserService.ensureUploadDirExists();
-
   const results = [];
   let successCount = 0;
   let failedCount = 0;
@@ -96,9 +94,8 @@ export const uploadResumes = asyncHandler(async (req, res) => {
       fileLog.extracted = { length: resumeText.length, preview: resumeText.slice(0, 300) };
       uploadLog.stages.push({ stage: 'pdf_extraction', file: file.originalname, length: resumeText.length });
 
-      const analysis = await openaiResumeAnalyzerService.analyzeResume(resumeText);
-      // capture AI analysis summary if available
-      uploadLog.stages.push({ stage: 'ai_analysis', file: file.originalname, model: analysis?.model || null, promptPreview: analysis?.promptPreview || null, raw: analysis?.raw || null });
+      const analysis = fallbackParseResume(resumeText);
+      uploadLog.stages.push({ stage: 'regex_parsing', file: file.originalname });
 
       const safeName = analysis.name?.trim() || "Unknown Candidate";
       const safeEmail = analysis.email
@@ -111,12 +108,6 @@ export const uploadResumes = asyncHandler(async (req, res) => {
       );
       fileLog.resolved = { name: safeName, email: safeEmail, phone: safePhone };
 
-      const filePath = await resumeParserService.saveResumeFile(
-        file.buffer,
-        file.originalname
-      );
-      fileLog.savedPath = filePath;
-
       const candidatePayload = {
         name: safeName,
         email: safeEmail,
@@ -125,7 +116,6 @@ export const uploadResumes = asyncHandler(async (req, res) => {
         assignedHR: assignedHR.trim(), // Store assignedHR ID
         status: "NEW",
         source: "RESUME",
-        resumeFilePath: filePath,
         aiAnalysis: {
           skills: Array.isArray(analysis.skills) ? analysis.skills : [],
           experienceYears: Math.max(0, parseInt(analysis.experienceYears) || 0),

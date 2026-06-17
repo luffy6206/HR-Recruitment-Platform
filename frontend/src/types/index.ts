@@ -175,6 +175,5 @@ export interface ResumeAnalysisResult {
 }
 
 export interface CandidateFromResume extends Omit<Candidate, "id" | "code" | "createdAt"> {
-  resumeFilePath: string;
   aiAnalysis: ResumeAnalysisResult;
 }

@@ -5,10 +5,7 @@ import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
 const pdfParseModule = require("pdf-parse");
-const PDFParse =
-  typeof pdfParseModule === "function"
-    ? pdfParseModule
-    : pdfParseModule.PDFParse ?? pdfParseModule.default?.PDFParse ?? pdfParseModule.default ?? pdfParseModule;
+const PDFParse = pdfParseModule.PDFParse || pdfParseModule;
 
 const ALLOWED_DOC_TYPES = new Set([
   "application/pdf",
@@ -22,23 +19,9 @@ const ALLOWED_DOC_TYPES = new Set([
 
 /**
  * Service for parsing resume files
- * Extracts text content and saves uploads to disk
+ * Extracts text content from memory buffers
  */
 export const resumeParserService = {
-  /**
-   * Ensure upload directory exists
-   */
-  async ensureUploadDirExists() {
-    try {
-      const uploadsDir = path.join(process.cwd(), "uploads", "resumes");
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-    } catch (error) {
-      console.error("[UPLOAD] Error creating uploads directory:", error);
-    }
-  },
-
   /**
    * Extract text from an uploaded resume file
    * Supports PDF and DOCX files
@@ -128,32 +111,6 @@ export const resumeParserService = {
     } catch (error) {
       console.error(`[DOCX] ❌ DOCX parsing error: ${error.message}`);
       throw new Error(`DOCX parsing error: ${error.message}`);
-    }
-  },
-
-  /**
-   * Save uploaded resume file to disk
-   * Returns relative path for database storage
-   */
-  async saveResumeFile(buffer, fileName) {
-    try {
-      const uploadsDir = path.join(process.cwd(), "uploads", "resumes");
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-
-      const timestamp = Date.now();
-      const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const uniqueFileName = `${timestamp}-${safeFileName}`;
-      const filePath = path.join(uploadsDir, uniqueFileName);
-
-      fs.writeFileSync(filePath, buffer);
-      console.log(`[UPLOAD] ✅ Saved file: ${uniqueFileName}`);
-
-      return `/uploads/resumes/${uniqueFileName}`;
-    } catch (error) {
-      console.error(`[UPLOAD] ❌ Failed to save resume file: ${error.message}`);
-      throw new Error(`Failed to save resume file: ${error.message}`);
     }
   },
 };
