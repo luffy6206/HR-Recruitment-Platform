@@ -130,7 +130,6 @@ export const createCandidate = async (
     deletedCandidate.category = category;
     deletedCandidate.status = status;
     deletedCandidate.assignedHR = assignedHR || undefined;
-    deletedCandidate.resumeFilePath = payload.resumeFilePath ?? deletedCandidate.resumeFilePath;
     deletedCandidate.source = payload.source ?? deletedCandidate.source;
     deletedCandidate.aiAnalysis = payload.aiAnalysis ?? deletedCandidate.aiAnalysis;
     deletedCandidate.uploadInfo = {

@@ -10,6 +10,8 @@ import { notificationService, searchService } from "@/services";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
+import { socketService } from "@/services/socket";
+import { toast } from "sonner";
 
 export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { user, logout } = useAuth();
@@ -18,6 +20,31 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+
+  useEffect(() => {
+    console.log("[Topbar] Setting up socket event listeners");
+    socketService.onNotificationReceived((notification) => {
+      console.log("[Topbar] Socket notification received:", notification);
+      console.log("[Topbar] Invalidating 'notifications' query...");
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      
+      if (notification.type === "ASSIGNMENT") {
+        console.log("[Topbar] Triggering toast for assignment...");
+        toast.info("New Candidate Assigned", {
+          description: notification.message,
+          action: {
+            label: "View",
+            onClick: () => navigate("/candidates"),
+          },
+        });
+      }
+    });
+
+    return () => {
+      console.log("[Topbar] Cleaning up socket event listeners");
+      socketService.offNotificationReceived();
+    };
+  }, [qc, navigate]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

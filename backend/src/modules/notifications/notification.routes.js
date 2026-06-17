@@ -14,6 +14,12 @@ router.get(
 );
 
 router.patch(
+  "/read-all",
+  protect,
+  controller.markAllRead
+);
+
+router.patch(
   "/:id/read",
   protect,
   controller.markAsRead

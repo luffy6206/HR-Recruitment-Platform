@@ -33,6 +33,17 @@ export const markAsRead =
     );
   });
 
+export const markAllRead =
+  asyncHandler(async (req, res) => {
+    await notificationService.markAllRead(req.user.id);
+
+    return successResponse(
+      res,
+      { success: true },
+      "All notifications marked as read"
+    );
+  });
+
 export const clearNotifications =
   asyncHandler(async (req, res) => {
     await notificationService.clearNotifications(req.user.id);

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { User } from "@/types";
 import { authService } from "@/services";
 import { tokenStore } from "@/services/http";
+import { socketService } from "@/services/socket";
 
 const USER_KEY = "hrr_user";
 
@@ -23,7 +24,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") { setLoading(false); return; }
     const raw = window.localStorage.getItem(USER_KEY);
     if (raw && tokenStore.access) {
-      try { setUser(JSON.parse(raw)); } catch { /* noop */ }
+      try { 
+        setUser(JSON.parse(raw)); 
+        socketService.connect();
+      } catch { /* noop */ }
     }
     setLoading(false);
   }, []);
@@ -33,11 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokenStore.set(res.accessToken, res.refreshToken);
     window.localStorage.setItem(USER_KEY, JSON.stringify(res.user));
     setUser(res.user);
+    socketService.connect();
     return res.user;
   }, []);
 
   const logout = useCallback(() => {
     tokenStore.clear();
+    socketService.disconnect();
     if (typeof window !== "undefined") window.localStorage.removeItem(USER_KEY);
     setUser(null);
   }, []);

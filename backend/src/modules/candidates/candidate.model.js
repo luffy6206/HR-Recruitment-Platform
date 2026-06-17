@@ -88,12 +88,6 @@ const candidateSchema = new mongoose.Schema(
       ref: "User",
     },
 
-    // Resume storage
-    resumeFilePath: {
-      type: String,
-      default: null,
-    },
-
     // Legacy candidate code field (kept for compatibility with older indexes)
     candidateCode: {
       type: String,

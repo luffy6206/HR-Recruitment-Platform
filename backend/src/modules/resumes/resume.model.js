@@ -20,8 +20,7 @@ const resumeSchema =
 
       fileUrl: {
         type: String,
-
-        required: true,
+        default: null,
       },
 
       fileSize: Number,

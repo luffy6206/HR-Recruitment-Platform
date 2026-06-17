@@ -1,4 +1,5 @@
 import Notification from "./notification.model.js";
+import { socketService } from "../../shared/services/socket.service.js";
 
 export const createNotification =
   async ({
@@ -7,12 +8,18 @@ export const createNotification =
     message,
     type,
   }) => {
-    return Notification.create({
+    console.log(`[NotificationService] Creating ${type} notification for user ${userId}`);
+    const notification = await Notification.create({
       userId,
       title,
       message,
       type,
     });
+    console.log(`[NotificationService] Notification created in DB: ${notification._id}`);
+
+    socketService.emitToUser(userId, "notification:received", notification);
+
+    return notification;
   };
 
 export const getNotifications =
@@ -36,6 +43,19 @@ export const markAsRead =
       },
       {
         new: true,
+      }
+    );
+  };
+
+export const markAllRead =
+  async (userId) => {
+    return Notification.updateMany(
+      {
+        userId,
+        isRead: false,
+      },
+      {
+        isRead: true,
       }
     );
   };
