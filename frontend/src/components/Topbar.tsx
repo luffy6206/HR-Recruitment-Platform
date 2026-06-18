@@ -92,17 +92,8 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
-  const assignmentNotifications = notifications.filter((n) => n.type === "ASSIGNMENT" && !n.read);
-  const unreadAssignmentCount = assignmentNotifications.length;
-  const otherNotifications = notifications.filter((n) => n.type !== "ASSIGNMENT" || n.read);
-
-  const extractCandidateName = (message: string) => {
-    return message.split(" assigned to you by ")[0] || "Unknown Candidate";
-  };
-
-  const extractPerformerName = (message: string) => {
-    return message.split(" assigned to you by ")[1] || "System Admin";
-  };
+  const unreadNotifications = notifications.filter((n) => !n.read);
+  const unreadCount = unreadNotifications.length;
 
   const initials = user?.name ? user.name.split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("") || "U" : "U";
 
@@ -165,9 +156,9 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
           <DropdownMenuTrigger asChild>
             <button className="relative grid size-9 place-items-center rounded-lg border border-border bg-card text-foreground/70 transition hover:bg-muted">
               <Bell className="size-4" />
-              {unreadAssignmentCount > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
-                  {unreadAssignmentCount}
+                  {unreadCount}
                 </span>
               )}
             </button>
@@ -176,11 +167,11 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
             <DropdownMenuLabel className="flex items-center justify-between">
               <div>
                 <div className="font-medium">
-                  {unreadAssignmentCount > 0
-                    ? `${unreadAssignmentCount} New Candidate${unreadAssignmentCount > 1 ? "s" : ""} Assigned`
+                  {unreadCount > 0
+                    ? `${unreadCount} New Notification${unreadCount > 1 ? "s" : ""}`
                     : "Notifications"}
                 </div>
-                <div className="text-xs text-muted-foreground">{notifications.filter(n => !n.read).length} unread total</div>
+                <div className="text-xs text-muted-foreground">{notifications.length} total notifications</div>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => markAll.mutate()} className="text-xs text-primary underline">Mark all</button>
@@ -193,47 +184,17 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
                 <div className="p-4 text-sm text-muted-foreground">You're all caught up.</div>
               )}
               
-              {/* Grouped Assignment Notifications */}
-              {unreadAssignmentCount > 0 && (
-                <div className="border-b border-border bg-primary/5 px-4 py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-sm font-semibold text-foreground">New Candidate Assignments</div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {formatDistanceToNow(new Date(assignmentNotifications[0].createdAt), { addSuffix: true })}
-                    </div>
-                  </div>
-                  <div className="mt-2 flex flex-col gap-1.5">
-                    {assignmentNotifications.map((n) => (
-                      <div key={n.id} className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-                          <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-                          <span className="truncate">{extractCandidateName(n.body)}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => markOne.mutate(n.id)}
-                          className="shrink-0 text-[10px] font-semibold text-primary hover:underline"
-                        >
-                          Mark read
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-2.5 text-[10px] text-muted-foreground">
-                    Assigned by {extractPerformerName(assignmentNotifications[0].body)}
-                  </div>
-                </div>
-              )}
-
-              {/* Other Notifications */}
-              {otherNotifications.map((n) => (
+              {notifications.map((n) => (
                 <div
                   key={n.id}
                   className={`flex items-start justify-between gap-3 border-b border-border px-4 py-3 transition ${n.read ? "bg-transparent opacity-90" : "bg-primary/5"}`}
                 >
                   <button
                     type="button"
-                    onClick={() => !n.read && markOne.mutate(n.id)}
+                    onClick={() => {
+                      if (!n.read) markOne.mutate(n.id);
+                      if (n.type === "ASSIGNMENT") navigate("/candidates");
+                    }}
                     className="min-w-0 text-left"
                   >
                     <div className="flex items-center justify-between gap-2">
