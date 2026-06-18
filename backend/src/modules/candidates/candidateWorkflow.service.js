@@ -82,13 +82,15 @@ export const assignCandidate =
     await createNotification({
       userId: hrId,
 
-      title:
-        "Candidate Assigned",
+      title: "1 New Candidate Assigned",
 
       message: `${candidate.name} assigned to you by ${performer?.name || "System Admin"}`,
 
-      type:
-        "ASSIGNMENT",
+      type: "ASSIGNMENT",
+      metadata: {
+        candidateId: candidate._id,
+        candidateName: candidate.name
+      }
     });
 
     return candidate;

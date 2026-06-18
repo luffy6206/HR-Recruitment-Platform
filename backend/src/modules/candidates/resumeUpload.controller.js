@@ -8,6 +8,8 @@ import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
 import { updateProfileFromResume } from "../ai/profileUpdater.service.js";
+import { createNotification } from "../notifications/notification.service.js";
+import User from "../auth/auth.model.js";
 /**
  * Upload and process multiple resume files
  * Extracts text, parses with regex, creates candidates
@@ -65,6 +67,7 @@ export const uploadResumes = asyncHandler(async (req, res) => {
   }
 
   const results = [];
+  const importedCandidates = [];
   let successCount = 0;
   let failedCount = 0;
   let duplicateCount = 0;
@@ -98,10 +101,10 @@ export const uploadResumes = asyncHandler(async (req, res) => {
       uploadLog.stages.push({ stage: 'regex_parsing', file: file.originalname });
 
       const safeName = analysis.name?.trim() || "Unknown Candidate";
-      const safeEmail = analysis.email
+      let safeEmail = analysis.email
         ? analysis.email.toLowerCase().trim()
         : `unknown-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
-      const safePhone = analysis.phone?.trim() || "000-000-0000";
+      let safePhone = analysis.phone?.trim() || "000-000-0000";
 
       console.log(
         `[UPLOAD] Resolved candidate info: ${safeName}, ${safeEmail}, ${safePhone ?? "<none>"}`
@@ -147,7 +150,7 @@ export const uploadResumes = asyncHandler(async (req, res) => {
 
       console.log("Existing candidate:", existingCandidate?._id?.toString() ?? null);
 
-      if (existingCandidate) {
+      if (existingCandidate && process.env.SKIP_DUPLICATE_CHECK !== 'true') {
         console.log(
           `[DUPLICATE CHECK] email: ${candidatePayload.email}, phone: ${candidatePayload.phone ?? "<none>"}, existing candidate id: ${existingCandidate._id}`
         );
@@ -201,6 +204,11 @@ export const uploadResumes = asyncHandler(async (req, res) => {
         email: candidate.email,
         code: candidate.code,
       });
+
+      importedCandidates.push({
+        id: candidate._id,
+        name: candidate.name
+      });
       // attach fileLog to results for later persistence
       fileLog.result = { id: candidate._id.toString(), name: candidate.name, email: candidate.email, code: candidate.code };
       uploadLog.files = uploadLog.files.map(f => f.fileName === file.originalname ? { ...f, ...fileLog } : f);
@@ -218,6 +226,41 @@ export const uploadResumes = asyncHandler(async (req, res) => {
         fileName: file.originalname,
         errors: [message],
       });
+    }
+  }
+
+  // Send notification for successful assignments
+  if (successCount > 0) {
+    try {
+      const performer = await User.findById(req.user.id);
+      const performerName = performer?.name || "System Admin";
+
+      if (successCount === 1) {
+        await createNotification({
+          userId: assignedHR.trim(),
+          title: "1 New Candidate Assigned",
+          message: `${importedCandidates[0].name} assigned to you by ${performerName}`,
+          type: "ASSIGNMENT",
+          metadata: {
+            candidateId: importedCandidates[0].id,
+            candidateName: importedCandidates[0].name,
+          },
+        });
+      } else {
+        await createNotification({
+          userId: assignedHR.trim(),
+          title: `${successCount} New Candidates Assigned`,
+          message: `${successCount} candidates assigned to you by ${performerName}`,
+          type: "ASSIGNMENT",
+          metadata: {
+            candidateIds: importedCandidates.map((c) => c.id),
+            candidateNames: importedCandidates.map((c) => c.name),
+          },
+        });
+      }
+      console.log(`[UPLOAD] Notification sent to HR ${assignedHR} for ${successCount} candidates`);
+    } catch (notifError) {
+      console.error("[UPLOAD] Failed to send notification:", notifError);
     }
   }
 

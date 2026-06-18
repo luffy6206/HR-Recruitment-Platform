@@ -7,6 +7,7 @@ export const createNotification =
     title,
     message,
     type,
+    metadata = {},
   }) => {
     console.log(`[NotificationService] Creating ${type} notification for user ${userId}`);
     const notification = await Notification.create({
@@ -14,6 +15,7 @@ export const createNotification =
       title,
       message,
       type,
+      metadata,
     });
     console.log(`[NotificationService] Notification created in DB: ${notification._id}`);
 
